@@ -52,6 +52,9 @@ activeTeams <- unique(c(homeTeams,awayTeams))
 activeVenues <- unique(games$venue_id)
 names(activeVenues) <- "id"
 
+# Transform and Clean
+games <- games %>% rename("idGame"=id)
+
 #
 ## Extract information from "games/teams" endpoint for similar season range as "games"
 #
@@ -60,17 +63,31 @@ for (i in 2012:2019){
   if (i==2012) {
     year <- i
     for (j in 1:16){
-      week <- j
-      # Generate regular season games list
-      fullUrlGames <- paste0(baseUrl,"games/teams?year=",year,"&week=",week,"&seasonType=regular")
-      getGames <- GET(fullUrlGames)
-      getGamesText <- content(getGames, "text")
-      gameStats <- as.list(fromJSON(getGamesText, flatten = TRUE))
-      # Generate postseason games list and append
-      fullUrlGames <- paste0(baseUrl,"games/teams?year=",year,"&week=",week,"&seasonType=postseason")
-      getGames <- GET(fullUrlGames)
-      getGamesText <- content(getGames, "text")
-      gameStats <-  bind_rows(gameStats,as.list(fromJSON(getGamesText, flatten = TRUE)))
+      if (j==1) {
+        week <- j
+        # Generate regular season games list
+        fullUrlGames <- paste0(baseUrl,"games/teams?year=",year,"&week=",week,"&seasonType=regular")
+        getGames <- GET(fullUrlGames)
+        getGamesText <- content(getGames, "text")
+        gameStatRaw <- as.list(fromJSON(getGamesText, flatten = TRUE))
+        # Generate postseason games list and append
+        fullUrlGames <- paste0(baseUrl,"games/teams?year=",year,"&week=",week,"&seasonType=postseason")
+        getGames <- GET(fullUrlGames)
+        getGamesText <- content(getGames, "text")
+        gameStatRaw <-  bind_rows(gameStatRaw,as.list(fromJSON(getGamesText, flatten = TRUE)))
+      } else{
+          week <- j
+          # Generate regular season games list
+          fullUrlGames <- paste0(baseUrl,"games/teams?year=",year,"&week=",week,"&seasonType=regular")
+          getGames <- GET(fullUrlGames)
+          getGamesText <- content(getGames, "text")
+          gameStatRaw <- bind_rows(gameStatRaw,as.list(fromJSON(getGamesText, flatten = TRUE)))
+          # Generate postseason games list and append
+          fullUrlGames <- paste0(baseUrl,"games/teams?year=",year,"&week=",week,"&seasonType=postseason")
+          getGames <- GET(fullUrlGames)
+          getGamesText <- content(getGames, "text")
+          gameStatRaw <-  bind_rows(gameStatRaw,as.list(fromJSON(getGamesText, flatten = TRUE)))
+        }
     }  
   } else{
       year <- i
@@ -80,46 +97,50 @@ for (i in 2012:2019){
         fullUrlGames <- paste0(baseUrl,"games/teams?year=",year,"&week=",week,"&seasonType=regular")
         getGames <- GET(fullUrlGames)
         getGamesText <- content(getGames, "text")
-        gameStats <- bind_rows(gameStats,as.list(fromJSON(getGamesText, flatten = TRUE)))
+        gameStatRaw <- bind_rows(gameStatRaw,as.list(fromJSON(getGamesText, flatten = TRUE)))
         # Generate postseason games list and append
         fullUrlGames <- paste0(baseUrl,"games/teams?year=",year,"&week=",week,"&seasonType=postseason")
         getGames <- GET(fullUrlGames)
         getGamesText <- content(getGames, "text")
-        gameStats <-  bind_rows(gameStats,as.list(fromJSON(getGamesText, flatten = TRUE)))
+        gameStatRaw <-  bind_rows(gameStatRaw,as.list(fromJSON(getGamesText, flatten = TRUE)))
       }
     }
 }
 
-## Need to transform some of the nested lists that are returned inside of gameStats
-## transformGameStats
-gameIdLength <- length(gameStats[[1]])
+## Need to transform some of the nested lists that are returned inside of gameStat
+## transformGameStat
+gameIdLength <- length(gameStatRaw[[1]])
 #still need to automate the length of i by determining count of gameID in returned list
-for (i in 1:gameIdLength) {
-  if (i==1) {
-    tID <- rep(gameStats[[1]][[i]])
-    tSUM <- cbind(tID,gameStats[[2]][[i]])
+for (k in 1:gameIdLength) {
+  if (k==1) {
+    tID <- rep(gameStatRaw[[1]][[k]])
+    tSUM <- cbind(tID,gameStatRaw[[2]][[k]])
     tT1 <- as_tibble((tSUM[6])[[1]][[1]] %>% spread(category,stat))
     tT2 <- as_tibble((tSUM[6])[[1]][[2]] %>% spread(category,stat))
     tTT <- bind_rows(tT1,tT2)
     tSUM <- select(tSUM,-6)
-    teamStats <- bind_cols(tSUM,tTT)
+    gameStats <- bind_cols(tSUM,tTT)
   }
   else{
-    tID <- rep(gameStats[[1]][[i]])
-    tSUM <- cbind(tID,gameStats[[2]][[i]])
+    tID <- rep(gameStatRaw[[1]][[k]])
+    tSUM <- cbind(tID,gameStatRaw[[2]][[k]])
     tT1 <- as_tibble((tSUM[6])[[1]][[1]] %>% spread(category,stat))
     tT2 <- as_tibble((tSUM[6])[[1]][[2]] %>% spread(category,stat))
     tTT <- bind_rows(tT1,tT2)
     tSUM <- select(tSUM,-6)
-    teamStatsApp <- bind_cols(tSUM,tTT)
-    teamStats <- bind_rows(teamStats,teamStatsApp)
+    gameStatsApp <- bind_cols(tSUM,tTT)
+    gameStats <- bind_rows(gameStats,gameStatsApp)
   }
 }
 
 # Transform and Clean
-teamStats <- teamStats %>% mutate(passCompletions=as.integer(stringr::word(completionAttempts,1,sep="-"))) %>%
+gameStats <- gameStats %>% mutate(passCompletions=as.integer(stringr::word(completionAttempts,1,sep="-"))) %>%
                            mutate(passAttempts=as.integer(stringr::word(completionAttempts,2,sep="-"))) %>%
-                           mutate(passCompletionPct=round(passCompletions/passAttempts,3))
+                           mutate(passCompletionPct=round(passCompletions/passAttempts,3)) %>%
+                           rename("idGame"=tID)
+
+# Find missing games from gameStats compared to games
+ missingGames <- anti_join(games,gameStats,by="idGame")
 
 #
 ## Extract information from "teams" endpoint for list of all teams and properties
@@ -154,10 +175,22 @@ venues <- as_tibble(fromJSON(getVenuesText, flatten = TRUE))
 venues <- subset(venues, id %in% activeVenues)
 
 #
+## Extract information from "talent" endpoint to build list of stadiums and their properties
+#
+
+# buildTalentURL
+fullUrlTalent <- paste0(baseUrl,"talent")
+
+# Generate talent list
+getTalent <- GET(fullUrlTalent)
+getTalentText <- content(getTalent, "text")
+talent <- as_tibble(fromJSON(getTalentText, flatten = TRUE))
+
+#
 ## Save desired objects in RData file for calling/usage elsewhere
 #
 
-save(teams,venues,games,teamStats,file="collegeFootball.RData")
+save(teams,venues,games,gameStats,file="collegeFootball.RData")
 
 #
 ## END END END END END END END END END END END END
