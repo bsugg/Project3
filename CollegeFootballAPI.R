@@ -5,6 +5,8 @@ library(stringr)
 library(purrr)
 library(httr)
 library(jsonlite)
+library(lubridate)
+library(anytime)
 
 # Create base URL to call from from https://api.collegefootballdata.com/
 baseUrl <- "https://api.collegefootballdata.com/"
@@ -52,8 +54,16 @@ activeTeams <- unique(c(homeTeams,awayTeams))
 activeVenues <- unique(games$venue_id)
 names(activeVenues) <- "id"
 
-# Transform and Clean
-games <- games %>% rename("idGame"=id)
+## Transform and Clean
+games <- games %>% rename("idGame"=id) %>% select(-home_line_scores,-away_line_scores)
+games <- games %>% mutate(kickoffDate=as.Date(anydate(start_date))) %>% 
+                   mutate(kickoffDay=weekdays(kickoffDate)) %>%
+                   mutate(kickoffTime=anytime(start_date))
+games <- games %>% select(-start_date,-start_time_tbd)
+games$home_post_win_prob <- round(as.numeric(as.character(games$home_post_win_prob)),4)
+games$away_post_win_prob <- round(as.numeric(as.character(games$away_post_win_prob)),4)
+games$excitement_index <- round(as.numeric(as.character(games$excitement_index)),4)
+games <- games %>% select(1:3,21:23,4:20)
 
 #
 ## Extract information from "games/teams" endpoint for similar season range as "games"
@@ -137,7 +147,15 @@ for (k in 1:gameIdLength) {
 gameStats <- gameStats %>% mutate(passCompletions=as.integer(stringr::word(completionAttempts,1,sep="-"))) %>%
                            mutate(passAttempts=as.integer(stringr::word(completionAttempts,2,sep="-"))) %>%
                            mutate(passCompletionPct=round(passCompletions/passAttempts,3)) %>%
-                           rename("idGame"=tID)
+                           rename("idGame"=tID) %>%
+                           mutate(penaltyCount=as.integer(stringr::word(totalPenaltiesYards,1,sep="-"))) %>%
+                           mutate(penaltyYards=as.integer(stringr::word(totalPenaltiesYards,2,sep="-"))) %>% 
+                           mutate(fourthDownConverts=as.integer(stringr::word(fourthDownEff,1,sep="-"))) %>%
+                           mutate(fourthDownAttempts=as.integer(stringr::word(fourthDownEff,2,sep="-"))) %>%
+                           mutate(fourthDownEffPct=ifelse(fourthDownAttempts==0,NA,round(fourthDownConverts/fourthDownAttempts,3))) %>%
+                           mutate(thirdDownConverts=as.integer(stringr::word(thirdDownEff,1,sep="-"))) %>%
+                           mutate(thirdDownAttempts=as.integer(stringr::word(thirdDownEff,2,sep="-"))) %>%
+                           mutate(thirdDownEffPct=ifelse(thirdDownAttempts==0,NA,round(thirdDownConverts/thirdDownAttempts,3)))
 
 # Find missing games from gameStats compared to games
  missingGames <- anti_join(games,gameStats,by="idGame")
@@ -159,6 +177,8 @@ getLogos <- map_df(transpose(getLogos), ~map_chr(.,~ifelse(is.null(.),NA,.)))
 teams <- as_tibble(bind_cols(getConfJson[1:11],getLogos))
 ## Reduce teams list to active teams that are included in the games data set
 teams <- subset(teams, id %in% activeTeams)
+## Turn conference into a factor and replace NA values to make selection user friendly
+teams$conference <- replace_na(teams$conference,"Other")
 
 #
 ## Extract information from "venues" endpoint to build list of stadiums and their properties
@@ -173,6 +193,11 @@ getVenuesText <- content(getVenues, "text")
 venues <- as_tibble(fromJSON(getVenuesText, flatten = TRUE))
 ## Reduce venues list to active venues that are included in the games data set
 venues <- subset(venues, id %in% activeVenues)
+venues <- venues %>% rename("venue_id"=id)
+venues$elevation <- round(as.numeric(as.character(venues$elevation)),1)
+venuesTrun <- select(venues,c(1,3:14))
+
+gamesVenues <- left_join(games,venuesTrun,by="venue_id")
 
 #
 ## Extract information from "talent" endpoint to build list of stadiums and their properties
@@ -187,10 +212,22 @@ getTalentText <- content(getTalent, "text")
 talent <- as_tibble(fromJSON(getTalentText, flatten = TRUE))
 
 #
+## Extract information from "pregameWP" endpoint to build list of pregame win probabilities
+#
+
+# buildPreWpURL
+fullUrlPreWp <- paste0(baseUrl,"metrics/wp/pregame")
+
+# Generate pregameWP list
+getPreWp <- GET(fullUrlPreWp)
+getPreWpText <- content(getPreWp, "text")
+pregameWP <- as_tibble(fromJSON(getPreWpText, flatten = TRUE))
+
+#
 ## Save desired objects in RData file for calling/usage elsewhere
 #
 
-save(teams,venues,games,gameStats,file="collegeFootball.RData")
+save(teams,venues,games,gameStats,gamesVenues,file="collegeFootball.RData")
 
 #
 ## END END END END END END END END END END END END
