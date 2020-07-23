@@ -12,15 +12,21 @@ function(input, output, session) {
   
   gamesNew <- reactive({
     games <- bind_rows(filter(games,home_team == input$team),
-                       filter(games,away_team == input$team)
-                      )
+                       filter(games,away_team == input$team))
+    games <- arrange(games,start_date)
   })
   
-  teamsR <- reactive({teams})
-  venuesR <- reactive({venues})
-  
-  output$tableTeams <- renderTable({
-    teamsR()
+  gameStatsNew <- reactive({
+    gameStats <- gameStats %>% filter(school == input$team)
   })
+  
+  #gamesNew <- reactive({
+   # bind_rows(filter(games,home_team == input$team),
+   #                    filter(games,away_team == input$team)
+   #                   )
+  #})
 
+  output$tableGames <- renderTable({
+    gamesNew()
+  })
 }

@@ -80,19 +80,12 @@ dashboardPage(
       
       # Data Exploration - Games
       tabItem(tabName = "games",
-              fluidRow(
-                box(tableOutput("tableVenues"))
-              )
-      ),
-      
-      # Data Exploration - Venues
-      tabItem(tabName = "venues",
-              fluidRow(
-                box(tableOutput("tableVenues"))
-              )
-      )
-      
-      # Next one here
+               fluidRow(
+                 column(width=9,
+                        box(tableOutput("tableGames"))
+                       )
+               )
+             )
     )
   )
 )
