@@ -3,15 +3,28 @@ library(dplyr)
 library(ggplot2)
 library(DT)
 
+# Call data generated from save function within the "CollegeFootballAPI.R" file
 load("collegeFootball.Rdata")
 
 function(input, output, session) {
+
+###################### REACTIVE ELEMENTS #####################################
+  
+  #####
+  ##### TEAM ATTRIBUTES
+  #####
   
   newTeams <- reactive({
+    # Filter on user selected team - generates a single record with team attributes
     teams <- teams %>% filter(school == input$team)
   })
   
+  #####
+  ##### GAMES
+  #####
+  
   newGames <- reactive({
+    # Filter on user selected team and parse "games" data set for home and away
     gamesHome <- games %>% filter(home_team == input$team) %>%
       mutate(home=1) %>%
       mutate(away=0) %>%
@@ -34,18 +47,22 @@ function(input, output, session) {
       mutate(opponent=home_team) %>%
       mutate(oppConference=ifelse(is.na(home_conference),"Other",home_conference)) %>%
       mutate(oppPoints=home_points)
+    # Merge the home and away sets into ONE games data set
     games <- bind_rows(gamesHome,gamesAway)
+    # Add a few more attributes and sort by date
     games <- games %>% mutate(outcome=ifelse(won==1,"Won",ifelse(loss==1,"Loss","Tie"))) %>%
                        mutate(team=input$team) %>%
                        mutate(score=paste0(teamPoints,"-",oppPoints)) %>%
                        mutate(location=ifelse(neutral_site,"Neutral",ifelse(home==1,"Home","Away")))
-    #games <- select(games,c(1:7,team))
-                       #mutate(teamConference=teamsNew$conference)
     games <- arrange(games,kickoffDate)
+    # Join with venues data set to enrich with location details
     gamesVenues <- left_join(games,venuesTrun,by="venue_id")
   })
   
-    
+  #####
+  ##### GAME STATS
+  #####
+  
   gameStatsNew <- reactive({
     gameStats <- gameStats %>% filter(school == input$team)
   })
