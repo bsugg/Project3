@@ -1,5 +1,6 @@
 library(shinydashboard)
 library(ggplot2)
+library(DT)
 
 # Shinydashboard information here https://rstudio.github.io/shinydashboard/index.html
 # Icons sourced from https://fontawesome.com/icons?d=gallery&m=free
@@ -38,6 +39,8 @@ dashboardPage(
                ),
       menuItem("Data", tabName = "data", icon = icon("th")),
       menuItem("Source API", icon = icon("file-code-o"),href = "https://collegefootballdata.com/"),
+      #uiOutput("logo"),
+      img(src = textOutput("logo"),width=210,style="display: block; margin-left: auto; margin-right: auto;"),
       selectizeInput("team", "Team",
                   selected = "North Carolina", choices = levels(as.factor(teams$school))
       )
@@ -62,7 +65,7 @@ dashboardPage(
                   br(),
                   "Describes the data and abilities of the app.", br(),
                   br(),
-                  "Utilize HEADERS and FORMAT TEXT."
+                  "Other dynamic text here."
                 )
               )
       ),
@@ -73,7 +76,7 @@ dashboardPage(
                 column(width=9,
                   box(title = "Team Details", status = "primary", width=9,
                       "Some text here and here and here..."
-                  )
+                  ),
                 )
               )
       ),
@@ -81,9 +84,9 @@ dashboardPage(
       # Data Exploration - Games
       tabItem(tabName = "games",
                fluidRow(
-                 column(width=9,
-                        box(tableOutput("tableGames"))
-                       )
+                 column(width = 12,
+                        box(div(style = 'overflow-x: scroll', DT::dataTableOutput("tableGames")),width = 12)
+                 )
                )
              )
     )
