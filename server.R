@@ -7,11 +7,11 @@ load("collegeFootball.Rdata")
 
 function(input, output, session) {
   
-  teamsNew <- reactive({
+  newTeams <- reactive({
     teams <- teams %>% filter(school == input$team)
   })
   
-  gamesNew <- reactive({
+  newGames <- reactive({
     gamesHome <- games %>% filter(home_team == input$team) %>%
       mutate(home=1) %>%
       mutate(away=0) %>%
@@ -42,8 +42,10 @@ function(input, output, session) {
     #games <- select(games,c(1:7,team))
                        #mutate(teamConference=teamsNew$conference)
     games <- arrange(games,kickoffDate)
+    gamesVenues <- left_join(games,venuesTrun,by="venue_id")
   })
   
+    
   gameStatsNew <- reactive({
     gameStats <- gameStats %>% filter(school == input$team)
   })
@@ -51,19 +53,49 @@ function(input, output, session) {
   
 ###################### OUTPUT ################################################
 
-  #output$logo <- renderImage({img(src=teamsNew$logos)})
-
-  output$logo <- renderText({
-    paste(teamsNew$logos)
+  #####
+  ##### DATA EXPLORATION
+  #####
+  
+  ###
+  ### TEAM SUMMARY
+  ###
+  
+  # TEXT
+  
+  output$logoURL <- renderUI({
+    #getTeams <- newTeams
+    url <- paste("http://a.espncdn.com/i/teamlogos/ncaa/500/153.png")
   })
   
-  #output$logoAlt <- renderText({
-  #  logoSrc <- teamsNew$logos
-  #})
+  output$teamTitle <- renderText({
+    getTeams <- newTeams()
+    teamName <- paste(getTeams$school,getTeams$mascot, sep = " ")
+  })
+  output$teamText <- renderText({
+    getGamesPro <- newGames()
+    paste("The average body weight for order", input$team, "is", nrow(getGamesPro), sep = " ")
+  })
   
-
+  # MAP
+  
+  
+  
+  # TABLE
+  
+  output$teamTable <- DT::renderDataTable({
+    getGamesPro <- newGames()
+    getGamesPro <- getGamesPro %>% select(season,kickoffDate,season_type,team,teamConference,opponent,oppConference,outcome,score,location,venue,city,state,country_code)
+    DT::datatable(getGamesPro,options = list(orderClasses = TRUE,pageLength = 5))
+  })
+  
+  ###
+  ### GAMES
+  ###
   
   output$tableGames <- DT::renderDataTable({
     DT::datatable(gamesNew(),options = list(orderClasses = TRUE,pageLength = 5))
   })
+  
+  
 }

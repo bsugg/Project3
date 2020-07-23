@@ -28,7 +28,7 @@ dashboardPage(
     sidebarMenu(
       menuItem("Information", tabName = "info", icon = icon("info")),
       menuItem("Data Exploration", tabName = "explore", icon = icon("bar-chart-o"),
-                menuSubItem("Teams", tabName = "teams"),
+                menuSubItem("Team Summary", tabName = "teamSum"),
                 menuSubItem("Games", tabName = "games"),
                 menuSubItem("Venues", tabName = "venues")
                ),
@@ -71,12 +71,19 @@ dashboardPage(
       ),
       
       # Data Exploration - Teams
-      tabItem(tabName = "teams",
+      tabItem(tabName = "teamSum",
               fluidRow(
-                column(width=9,
-                  box(title = "Team Details", status = "primary", width=9,
-                      "Some text here and here and here..."
+                column(width=6,
+                  box(status = "primary", width=9,
+                      tags$h3(textOutput("teamTitle")),
+                      textOutput("teamText"),
+                      tags$img(src = uiOutput("logoURL"), width = "100px", height = "100px")
                   ),
+                )
+              ),
+              fluidRow(
+                column(width = 12,
+                       box(div(style = 'overflow-x: scroll', DT::dataTableOutput("teamTable")),width = 12)
                 )
               )
       ),
