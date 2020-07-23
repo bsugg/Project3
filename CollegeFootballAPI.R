@@ -157,6 +157,23 @@ gameStats <- gameStats %>% mutate(passCompletions=as.integer(stringr::word(compl
                            mutate(thirdDownAttempts=as.integer(stringr::word(thirdDownEff,2,sep="-"))) %>%
                            mutate(thirdDownEffPct=ifelse(thirdDownAttempts==0,NA,round(thirdDownConverts/thirdDownAttempts,3)))
 
+gameStats$firstDowns <- as.integer(as.character(gameStats$firstDowns))
+for (c in 9:20) {
+  gameStats[,c] <- as.integer(as.character(gameStats[,c]))
+}
+for (c in 22:27) {
+  gameStats[,c] <- as.integer(as.character(gameStats[,c]))
+}
+for (c in 30:31) {
+  gameStats[,c] <- as.integer(as.character(gameStats[,c]))
+}
+for (c in 32:33) {
+  gameStats[,c] <- as.numeric(as.character(gameStats[,c]))
+}
+for (c in 34:40) {
+  gameStats[,c] <- as.integer(as.character(gameStats[,c]))
+}
+
 # Find missing games from gameStats compared to games
  missingGames <- anti_join(games,gameStats,by="idGame")
 
@@ -179,6 +196,7 @@ teams <- as_tibble(bind_cols(getConfJson[1:11],getLogos))
 teams <- subset(teams, id %in% activeTeams)
 ## Turn conference into a factor and replace NA values to make selection user friendly
 teams$conference <- replace_na(teams$conference,"Other")
+teams$logos <- paste0("\"",teams$logos,"\"")
 
 #
 ## Extract information from "venues" endpoint to build list of stadiums and their properties
