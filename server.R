@@ -76,6 +76,9 @@ function(input, output, session) {
                        mutate(margin=teamPoints-oppPoints) %>%
                        mutate(location=ifelse(neutral_site,"Neutral",ifelse(home==1,"Home","Away")))
     games <- arrange(games,kickoffDate)
+    # Join with talent data sets
+    games <- left_join(games,talentTeam,by=c("season","team"))
+    games <- left_join(games,talentOpp,by=c("season","opponent"))
     # Join with venues data set to enrich with location details
     gamesVenuesJoin <- left_join(games,venues,by="venueId")
     gamesVenuesJoin <- gamesVenuesJoin %>% mutate(venueCityState=ifelse(!is.na(venueState),paste0(venueCity,", ",venueState),paste0(venueCity)))
