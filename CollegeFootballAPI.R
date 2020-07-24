@@ -245,7 +245,7 @@ pregameWP <- as_tibble(fromJSON(getPreWpText, flatten = TRUE))
 ## Save desired objects in RData file for calling/usage elsewhere
 #
 
-save(teams,venues,games,gameStats,gamesVenues,file="collegeFootball.RData")
+save(teams,venues,games,gameStats,gamesVenues,venuesTrun,file="collegeFootball.RData")
 
 #
 ## END END END END END END END END END END END END
