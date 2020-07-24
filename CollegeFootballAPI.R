@@ -50,12 +50,8 @@ awayTeams <- unique(games$away_id)
 names(awayTeams) <- "id"
 activeTeams <- unique(c(homeTeams,awayTeams))
 
-# Derive unique list of active venues from games data set for filtering other end points later on
-activeVenues <- unique(games$venue_id)
-names(activeVenues) <- "id"
-
 ## Transform and Clean
-games <- games %>% rename("idGame"=id) %>% select(-home_line_scores,-away_line_scores)
+games <- games %>% rename("gameId"=id) %>% select(-home_line_scores,-away_line_scores)
 games <- games %>% mutate(kickoffDate=as.Date(anydate(start_date))) %>% 
                    mutate(kickoffDay=weekdays(kickoffDate)) %>%
                    mutate(kickoffTime=anytime(start_date))
@@ -64,6 +60,14 @@ games$home_post_win_prob <- round(as.numeric(as.character(games$home_post_win_pr
 games$away_post_win_prob <- round(as.numeric(as.character(games$away_post_win_prob)),4)
 games$excitement_index <- round(as.numeric(as.character(games$excitement_index)),4)
 games <- games %>% select(1:3,21:23,4:20)
+
+# Prepare for future joining with venues
+games <- games %>% select(-venue) %>% rename("venueId"=venue_id)
+games <- games %>% select(1:9,12:22,10:11)
+
+# Derive unique list of active venues from games data set for filtering other end points later on
+activeVenues <- unique(games$venueId)
+names(activeVenues) <- "venueId"
 
 #
 ## Extract information from "games/teams" endpoint for similar season range as "games"
@@ -147,7 +151,7 @@ for (k in 1:gameIdLength) {
 gameStats <- gameStats %>% mutate(passCompletions=as.integer(stringr::word(completionAttempts,1,sep="-"))) %>%
                            mutate(passAttempts=as.integer(stringr::word(completionAttempts,2,sep="-"))) %>%
                            mutate(passCompletionPct=round(passCompletions/passAttempts,3)) %>%
-                           rename("idGame"=tID) %>%
+                           rename("gameId"=tID) %>%
                            mutate(penaltyCount=as.integer(stringr::word(totalPenaltiesYards,1,sep="-"))) %>%
                            mutate(penaltyYards=as.integer(stringr::word(totalPenaltiesYards,2,sep="-"))) %>% 
                            mutate(fourthDownConverts=as.integer(stringr::word(fourthDownEff,1,sep="-"))) %>%
@@ -175,7 +179,7 @@ for (c in 34:40) {
 }
 
 # Find missing games from gameStats compared to games
- missingGames <- anti_join(games,gameStats,by="idGame")
+ missingGames <- anti_join(games,gameStats,by="gameId")
 
 #
 ## Extract information from "teams" endpoint for list of all teams and properties
@@ -209,13 +213,19 @@ fullUrlVenues <- paste0(baseUrl,"venues")
 getVenues <- GET(fullUrlVenues)
 getVenuesText <- content(getVenues, "text")
 venues <- as_tibble(fromJSON(getVenuesText, flatten = TRUE))
-## Reduce venues list to active venues that are included in the games data set
-venues <- subset(venues, id %in% activeVenues)
-venues <- venues %>% rename("venue_id"=id)
-venues$elevation <- round(as.numeric(as.character(venues$elevation)),1)
-venuesTrun <- select(venues,c(1,3:14))
 
-gamesVenues <- left_join(games,venuesTrun,by="venue_id")
+# Clean and transform variables
+venues$elevation <- round(as.numeric(as.character(venues$elevation)),1)
+
+# Rename variables
+venues <- venues %>% rename("venueId"=id,"venueName"=name,"venueCapacity"=capacity,"venueGrass"=grass,"venueCity"=city,"venueState"=state,
+                            "venueZip"=zip,"venueCountry"=country_code,"venueElevation"=elevation,
+                            "venueConstructed"=year_constructed,"venueDome"=dome,"venueTimezone"=timezone,
+                            "venueLat"=location.x,"venueLong"=location.y)
+## Reduce venues list to active venues that are included in the games data set
+venues <- subset(venues, venueId %in% activeVenues)
+# Make a joined data set between games and venues for validation
+gamesVenues <- left_join(games,venues,by="venueId")
 
 #
 ## Extract information from "talent" endpoint to build list of stadiums and their properties
@@ -244,8 +254,8 @@ pregameWP <- as_tibble(fromJSON(getPreWpText, flatten = TRUE))
 #
 ## Save desired objects in RData file for calling/usage elsewhere
 #
-
-save(teams,venues,games,gameStats,gamesVenues,venuesTrun,file="collegeFootball.RData")
+gameSeasons <- games
+save(teams,venues,games,gameStats,gamesVenues,gameSeasons,file="collegeFootball.RData")
 
 #
 ## END END END END END END END END END END END END
