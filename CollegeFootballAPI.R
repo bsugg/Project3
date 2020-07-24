@@ -239,6 +239,12 @@ fullUrlTalent <- paste0(baseUrl,"talent")
 getTalent <- GET(fullUrlTalent)
 getTalentText <- content(getTalent, "text")
 talent <- as_tibble(fromJSON(getTalentText, flatten = TRUE))
+talent <- talent %>% rename("season"=year)
+# Duplicate and create data sets for joining to tables where 2 team columns exist
+talentTeam <- talent
+talentTeam <- talentTeam %>% rename("team"=school,"teamTalent"=talent)
+talentOpp <- talent
+talentOpp <- talentOpp %>% rename("opponent"=school,"oppTalent"=talent)
 
 #
 ## Extract information from "pregameWP" endpoint to build list of pregame win probabilities
@@ -256,7 +262,7 @@ pregameWP <- as_tibble(fromJSON(getPreWpText, flatten = TRUE))
 ## Save desired objects in RData file for calling/usage elsewhere
 #
 gameSeasons <- games
-save(teams,venues,games,gameStats,gamesVenues,gameSeasons,file="collegeFootball.RData")
+save(teams,venues,games,gameStats,gamesVenues,gameSeasons,talentOpp,talentTeam,file="collegeFootball.RData")
 
 #
 ## END END END END END END END END END END END END
