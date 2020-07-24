@@ -76,8 +76,8 @@ function(input, output, session) {
                        mutate(location=ifelse(neutral_site,"Neutral",ifelse(home==1,"Home","Away")))
     games <- arrange(games,kickoffDate)
     # Join with venues data set to enrich with location details
-    gamesVenues <- left_join(games,venuesTrun,by="venue_id")
-    gamesVenues <- gamesVenues %>% mutate(cityState=ifelse(!is.na(state),paste0(city,", ",state),paste0(city)))
+    gamesVenuesJoin <- left_join(games,venues,by="venueId")
+    gamesVenuesJoin <- gamesVenuesJoin %>% mutate(venueCityState=ifelse(!is.na(venueState),paste0(venueCity,", ",venueState),paste0(venueCity)))
   })
   
   #####
@@ -130,7 +130,7 @@ function(input, output, session) {
   
   output$mymap <- renderLeaflet({
     getGamesPro <- newGames()
-    points <- cbind(getGamesPro$location.y,getGamesPro$location.x)
+    points <- cbind(getGamesPro$venueLong,getGamesPro$venueLat)
     
     leaflet() %>%
       addProviderTiles(providers$Stamen.TonerLite,
@@ -144,7 +144,7 @@ function(input, output, session) {
                                tags$strong("Opponent: "),getGamesPro$opponent,br(),
                                tags$strong("Outcome: "),getGamesPro$outcome," ",getGamesPro$score,br(),
                                tags$strong("Location: "),getGamesPro$location,br(),
-                               tags$strong("Venue: "),getGamesPro$venue," in ",getGamesPro$cityState
+                               tags$strong("Venue: "),getGamesPro$venueName," in ",getGamesPro$venueCityState
                                )
                 )
   })
@@ -153,7 +153,7 @@ function(input, output, session) {
   
   output$teamTable <- DT::renderDataTable({
     getGamesPro <- newGames()
-    getGamesPro <- getGamesPro %>% select(season,kickoffDate,season_type,team,teamConference,opponent,oppConference,outcome,score,margin,location,venue,cityState,country_code)
+    getGamesPro <- getGamesPro %>% select(season,kickoffDate,season_type,team,teamConference,opponent,oppConference,outcome,score,margin,location,venueName,venueCityState,venueCountry)
     DT::datatable(getGamesPro,options = list(orderClasses = TRUE,pageLength = 10))
   })
   
@@ -162,7 +162,7 @@ function(input, output, session) {
   ###
   
   output$tableGames <- DT::renderDataTable({
-    DT::datatable(gamesNew(),options = list(orderClasses = TRUE,pageLength = 5))
+    DT::datatable(newGames(),options = list(orderClasses = TRUE,pageLength = 5))
   })
   
   
