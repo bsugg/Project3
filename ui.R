@@ -45,7 +45,9 @@ dashboardPage(
       img(src = textOutput("logo"),width=210,style="display: block; margin-left: auto; margin-right: auto;"),
       selectizeInput("team", "Team",
                   selected = "North Carolina", choices = levels(as.factor(teams$school))
-      )
+      ),
+      sliderInput("sliderSeason", "Seasons",min=2012, max=2019,value=c(2012,2019,step=1,format("####"))
+                  )
     )
   ),
   

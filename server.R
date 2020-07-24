@@ -22,12 +22,27 @@ function(input, output, session) {
   })
   
   #####
+  ##### SEASON SLIDER VALUES
+  #####
+  
+  seasonFinder <- reactive({
+    # Filter on user selected team and parse "games" data set for home and away
+    gameSeasonsHome <- gameSeasons %>% filter(home_team == input$team)
+    gameSeasonsAway <- gameSeasons %>% filter(away_team == input$team)
+    # Merge the home and away sets into ONE games data set
+    gamesSeasons <- bind_rows(gameSeasonsHome,gameSeasonsAway)
+  })
+  
+  
+  #####
   ##### GAMES
   #####
   
   newGames <- reactive({
     # Filter on user selected team and parse "games" data set for home and away
     gamesHome <- games %>% filter(home_team == input$team) %>%
+                           filter(season >= input$sliderSeason[1]) %>%
+                           filter(season <= input$sliderSeason[2]) %>%
       mutate(home=1) %>%
       mutate(away=0) %>%
       mutate(teamConference=as.character(ifelse(!is.na(home_conference),home_conference,"Other"))) %>%
@@ -39,6 +54,8 @@ function(input, output, session) {
       mutate(oppConference=as.character(ifelse(!is.na(away_conference),away_conference,"Other"))) %>%
       mutate(oppPoints=away_points)
     gamesAway <- games %>% filter(away_team == input$team) %>%
+                           filter(season >= input$sliderSeason[1]) %>%
+                           filter(season <= input$sliderSeason[2]) %>%
       mutate(home=0) %>%
       mutate(away=1) %>%
       mutate(teamConference=as.character(ifelse(!is.na(away_conference),away_conference,"Other"))) %>%
@@ -74,6 +91,17 @@ function(input, output, session) {
   
 ###################### OUTPUT ################################################
 
+  #####
+  ##### SIDEBAR
+  #####
+  
+  observe({
+    getSeasons <- seasonFinder()
+    minSeason <- min(getSeasons$season)
+    maxSeason <- max(getSeasons$season)
+    updateSliderInput(session,"sliderSeason",min=minSeason,max=maxSeason,value = c(minSeason, maxSeason))
+  })
+  
   #####
   ##### DATA EXPLORATION
   #####
@@ -111,12 +139,12 @@ function(input, output, session) {
       addCircles(data = points,
                  color = ifelse(getGamesPro$outcome=="Won","#228B22","#FF0000"),
                  weight = 8,
-                 popup = paste("Season: ",getGamesPro$season," - ",tools::toTitleCase(getGamesPro$season_type),", ",ifelse(getGamesPro$conference_game,"Conference","NonConference"),br(),
-                               "Date: ",getGamesPro$kickoffDate,br(),
-                               "Opponent: ",getGamesPro$opponent,br(),
-                               "Outcome: ",getGamesPro$outcome," ",getGamesPro$score,br(),
-                               "Location: ",getGamesPro$location,br(),
-                               "Venue: ",getGamesPro$venue," in ",getGamesPro$cityState
+                 popup = paste(tags$strong("Season: "),getGamesPro$season," - ",tools::toTitleCase(getGamesPro$season_type),"- ",ifelse(getGamesPro$conference_game,"Conference","NonConference"),br(),
+                               tags$strong("Date: "),format(getGamesPro$kickoffTime,'%A, %B %d, %Y'),br(),
+                               tags$strong("Opponent: "),getGamesPro$opponent,br(),
+                               tags$strong("Outcome: "),getGamesPro$outcome," ",getGamesPro$score,br(),
+                               tags$strong("Location: "),getGamesPro$location,br(),
+                               tags$strong("Venue: "),getGamesPro$venue," in ",getGamesPro$cityState
                                )
                 )
   })
