@@ -139,7 +139,7 @@ function(input, output, session) {
       addCircles(data = points,
                  color = ifelse(getGamesPro$outcome=="Won","#228B22","#FF0000"),
                  weight = 8,
-                 popup = paste(tags$strong("Season: "),getGamesPro$season," - ",tools::toTitleCase(getGamesPro$season_type),"- ",ifelse(getGamesPro$conference_game,"Conference","NonConference"),br(),
+                 popup = paste(tags$strong("Season: "),getGamesPro$season," - ",getGamesPro$seasonType,"- ",ifelse(getGamesPro$conference_game,"Conference","NonConference"),br(),
                                tags$strong("Date: "),format(getGamesPro$kickoffTime,'%A, %B %d, %Y'),br(),
                                tags$strong("Opponent: "),getGamesPro$opponent,br(),
                                tags$strong("Outcome: "),getGamesPro$outcome," ",getGamesPro$score,br(),
@@ -153,8 +153,21 @@ function(input, output, session) {
   
   output$teamTable <- DT::renderDataTable({
     getGamesPro <- newGames()
-    getGamesPro <- getGamesPro %>% select(season,kickoffDate,season_type,team,teamConference,opponent,oppConference,outcome,score,margin,location,venueName,venueCityState,venueCountry)
-    DT::datatable(getGamesPro,options = list(orderClasses = TRUE,pageLength = 10))
+    getTeams <- newTeams()
+    customPrintName <- paste0(getTeams$abbreviation," Team Summary")
+    customFileName <- paste0(getTeams$abbreviation,"teamSummary")
+    getGamesPro <- getGamesPro %>% select(season,kickoffDate,seasonType,team,teamConference,opponent,oppConference,outcome,score,margin,location,venueName,venueCityState,venueCountry)
+    DT::datatable(getGamesPro,extensions = 'Buttons',
+                  options = list(orderClasses = TRUE, pageLength = 5,dom = 'Blfrtip',
+                                 lengthMenu = list(c(5,10,25,50,100,-1),c('5','10','25','50','100','All')),
+                                 buttons = c(list(list(extend = 'copy', title= "")),
+                                             list(list(extend = 'print', title= customPrintName)),
+                                             list(list(extend = 'csv', filename= customFileName)),
+                                             list(list(extend = 'excel',filename= customFileName,title= "")),
+                                             list(list(extend = 'pdf', filename= customFileName,title= customPrintName,orientation='landscape',pageSize= 'LEGAL'))
+                                             )
+                  )
+    )
   })
   
   ###

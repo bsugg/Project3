@@ -92,7 +92,8 @@ dashboardPage(
               ),
               fluidRow(
                 column(width = 12,
-                       box(div(style = 'overflow-x: scroll', DT::dataTableOutput("teamTable")),width = 12)
+                       box(div(style = 'overflow-x: scroll', DT::dataTableOutput("teamTable")),width = 12
+                       )
                 )
               )
       ),
