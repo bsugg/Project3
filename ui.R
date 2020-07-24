@@ -1,6 +1,8 @@
 library(shinydashboard)
 library(ggplot2)
 library(DT)
+library(leaflet)
+library(RColorBrewer)
 
 # Shinydashboard information here https://rstudio.github.io/shinydashboard/index.html
 # Icons sourced from https://fontawesome.com/icons?d=gallery&m=free
@@ -54,6 +56,7 @@ dashboardPage(
   #
   
   dashboardBody(
+    
     tabItems(
       
       # Information
@@ -74,11 +77,15 @@ dashboardPage(
       tabItem(tabName = "teamSum",
               fluidRow(
                 column(width=6,
-                  box(status = "primary", width=9,
+                  box(status = "primary",width=NULL,
                       tags$h3(textOutput("teamTitle")),
                       textOutput("teamText"),
                       tags$img(src = uiOutput("logoURL"), width = "100px", height = "100px")
-                  ),
+                  )
+                ),
+                column(width=6,
+                  box(leafletOutput("mymap"),width=NULL,
+                  )
                 )
               ),
               fluidRow(
