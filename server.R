@@ -4,6 +4,7 @@ library(ggplot2)
 library(DT)
 library(leaflet)
 library(ragtop)
+library(knitr)
 
 # Call data generated from save function within the "CollegeFootballAPI.R" file
 load("collegeFootball.Rdata")
@@ -69,7 +70,7 @@ function(input, output, session) {
     # Merge the home and away sets into ONE games data set
     games <- bind_rows(gamesHome,gamesAway)
     # Add a few more attributes and sort by date
-    games <- games %>% mutate(outcome=ifelse(won==1,"Won",ifelse(loss==1,"Loss","Tie"))) %>%
+    games <- games %>% mutate(outcome=as.factor(ifelse(won==1,"Won",ifelse(loss==1,"Loss","Tie")))) %>%
                        mutate(team=input$team) %>%
                        mutate(score=paste0(teamPoints,"-",oppPoints)) %>%
                        mutate(margin=teamPoints-oppPoints) %>%
@@ -92,9 +93,19 @@ function(input, output, session) {
 ###################### OUTPUT ################################################
 
   #####
-  ##### SIDEBAR
+  ##### UI ACTIONS
   #####
   
+  ###
+  ### SIDEBAR
+  ###
+  
+  # Team logo image
+  output$teamLogo<- renderUI({
+    tags$img(src=newTeams()$logos[1], width=210,style="display: block; margin-left: auto; margin-right: auto;")
+  })
+  
+  # Season slider, set min and max properties
   observe({
     getSeasons <- seasonFinder()
     minSeason <- min(getSeasons$season)
@@ -112,17 +123,16 @@ function(input, output, session) {
   
   # TEXT
   
-  output$logoURL <- renderUI({
-    getTeams <- newTeams()
-    url <- paste(getTeam$logos)
-  })
-  
+  # Set team name and mascot title
   output$teamTitle <- renderText({
     getTeams <- newTeams()
     teamName <- paste(getTeams$school,getTeams$mascot, sep = " ")
   })
+  
+  # Team introduction
   output$teamText <- renderText({
     getGamesPro <- newGames()
+    getTeams <- newTeams()
     paste("The average body weight for order", input$team, "is", nrow(getGamesPro), sep = " ")
   })
   

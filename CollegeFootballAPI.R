@@ -51,7 +51,9 @@ names(awayTeams) <- "id"
 activeTeams <- unique(c(homeTeams,awayTeams))
 
 ## Transform and Clean
-games <- games %>% rename("gameId"=id) %>% select(-home_line_scores,-away_line_scores)
+games <- games %>% rename("gameId"=id,"seasonType"=season_type) %>%
+                   select(-home_line_scores,-away_line_scores)
+games$seasonType <- factor(ifelse(games$seasonType=="regular","Regular",ifelse(games$seasonType=="postseason","Postseason","Other")))
 games <- games %>% mutate(kickoffDate=as.Date(anydate(start_date))) %>% 
                    mutate(kickoffDay=weekdays(kickoffDate)) %>%
                    mutate(kickoffTime=anytime(start_date))
@@ -200,7 +202,6 @@ teams <- as_tibble(bind_cols(getConfJson[1:11],getLogos))
 teams <- subset(teams, id %in% activeTeams)
 ## Turn conference into a factor and replace NA values to make selection user friendly
 teams$conference <- replace_na(teams$conference,"Other")
-teams$logos <- paste0("\"",teams$logos,"\"")
 
 #
 ## Extract information from "venues" endpoint to build list of stadiums and their properties

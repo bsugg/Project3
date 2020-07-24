@@ -41,8 +41,8 @@ dashboardPage(
                ),
       menuItem("Data", tabName = "data", icon = icon("th")),
       menuItem("Source API", icon = icon("file-code-o"),href = "https://collegefootballdata.com/"),
-      #uiOutput("logo"),
-      img(src = textOutput("logo"),width=210,style="display: block; margin-left: auto; margin-right: auto;"),
+      uiOutput("teamLogo", click = "Team Logo"),
+      #img(src = textOutput("logo"),width=210,style="display: block; margin-left: auto; margin-right: auto;"),
       selectizeInput("team", "Team",
                   selected = "North Carolina", choices = levels(as.factor(teams$school))
       ),
@@ -82,7 +82,10 @@ dashboardPage(
                   box(status = "primary",width=NULL,
                       tags$h3(textOutput("teamTitle")),
                       textOutput("teamText"),
-                      tags$img(src = uiOutput("logoURL"), width = "100px", height = "100px")
+                      #tags$img(src = uiOutput("logoURL"), width = "100px", height = "100px")
+                  ),
+                  box(status = "primary",width=NULL,
+                      uiOutput("teamRecord")
                   )
                 ),
                 column(width=6,
