@@ -74,7 +74,10 @@ function(input, output, session) {
                        mutate(team=input$team) %>%
                        mutate(score=paste0(teamPoints,"-",oppPoints)) %>%
                        mutate(margin=teamPoints-oppPoints) %>%
-                       mutate(location=ifelse(neutral_site,"Neutral",ifelse(home==1,"Home","Away")))
+                       mutate(location=ifelse(neutral_site,"Neutral",ifelse(home==1,"Home","Away"))) %>%
+                       mutate(schedule=ifelse(teamConference=="Other" & oppConference=="Other",NA,
+                                             ifelse(teamConference==oppConference,"Conference","NonConference"))
+                       )
     games <- arrange(games,kickoffDate)
     # Join with talent data sets
     games <- left_join(games,talentTeam,by=c("season","team"))
@@ -82,6 +85,15 @@ function(input, output, session) {
     # Join with venues data set to enrich with location details
     gamesVenuesJoin <- left_join(games,venues,by="venueId")
     gamesVenuesJoin <- gamesVenuesJoin %>% mutate(venueCityState=ifelse(!is.na(venueState),paste0(venueCity,", ",venueState),paste0(venueCity)))
+    
+    # Filter data based on manual selections of season type and schedule from user
+    if (input$selectSeasonType!="All") {
+      
+      gamesVenuesJoin <- filter(gamesVenuesJoin,seasonType == input$selectSeasonType)
+    } else {return(gamesVenuesJoin)}
+    if (input$selectSchedule!="All") {
+      gamesVenuesJoin <- filter(gamesVenuesJoin,schedule == input$selectSchedule)
+    } else {return(gamesVenuesJoin)}
   })
   
   #####
@@ -105,7 +117,7 @@ function(input, output, session) {
   
   # Team logo image
   output$teamLogo<- renderUI({
-    tags$img(src=newTeams()$logos[1], width=210,style="display: block; margin-left: auto; margin-right: auto;")
+    tags$img(src=newTeams()$logos[1], width=150,style="display: block; margin-left: auto; margin-right: auto;")
   })
   
   # Season slider, set min and max properties
@@ -139,6 +151,19 @@ function(input, output, session) {
     paste("The average body weight for order", input$team, "is", nrow(getGamesPro), sep = " ")
   })
   
+  # Create plot
+  output$allWinPlot <- renderPlot({
+    getGames <- newGames()
+    # Conservation color option
+    # conColor <- ifelse(input$conservation,newData$conservation,"color:black;")
+    # Scatter plot creation
+    clustSkate <- ggplot(data=getGames,aes(x=as.factor(season)))
+    clustSkate + geom_bar(position="dodge",aes(fill=outcome)) +
+      labs(x="Season",y="Games",title="Game Outcome by Season") +
+      scale_fill_discrete(name="") +
+      theme_bw()
+  })
+  
   # MAP
   
   output$mymap <- renderLeaflet({
@@ -150,8 +175,9 @@ function(input, output, session) {
                        options = providerTileOptions(noWrap = TRUE)
       ) %>%
       addCircles(data = points,
-                 color = ifelse(getGamesPro$outcome=="Won","#228B22","#FF0000"),
-                 weight = 8,
+                 # Original green color before matching ggplot was #228B22
+                 color = ifelse(getGamesPro$outcome=="Won","#00BFC4","#FF0000"),
+                 weight = 10,
                  popup = paste(tags$strong("Season: "),getGamesPro$season," - ",getGamesPro$seasonType,"- ",ifelse(getGamesPro$conference_game,"Conference","NonConference"),br(),
                                tags$strong("Date: "),format(getGamesPro$kickoffTime,'%A, %B %d, %Y'),br(),
                                tags$strong("Opponent: "),getGamesPro$opponent,br(),

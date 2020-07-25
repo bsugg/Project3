@@ -45,8 +45,18 @@ dashboardPage(
       selectizeInput("team", "Team",
                   selected = "North Carolina", choices = levels(as.factor(teams$school))
       ),
-      sliderInput("sliderSeason", "Seasons",min=2012, max=2019,value=c(2012,2019),step=1,sep=""
-                  )
+      sliderInput("sliderSeason", "Season",min=2012, max=2019,value=c(2012,2019),step=1,sep=""
+                  ),
+      radioButtons("radioGameSelect","Game Type Selection",choiceNames=list("Auto","Manual"),choiceValues=list("auto","manual")
+                   ),
+      conditionalPanel(condition = "input.radioGameSelect == 'manual'",style = "color:red;",
+                       selectizeInput("selectSeasonType", "Season Type",
+                                      selected = "All", choices = c("All","Regular","Postseason")
+                       ),
+                       selectizeInput("selectSchedule", "Schedule",
+                                      selected = "All", choices = c("All","Conference","NonConference")
+                       )
+      )
     )
   ),
   
@@ -57,13 +67,13 @@ dashboardPage(
   #
   
   dashboardBody(
-    
+  
     tabItems(
       
       # Information
       tabItem(tabName = "info",
               fluidRow(
-                box(title = "ST558 - Project 3", status = "primary",
+                box(title = "ST558 - Project 3", status = "primary",width=NULL,
                   "Brian Sugg", br(),
                   "July 27, 2020", br(),
                   br(),
@@ -74,23 +84,30 @@ dashboardPage(
               )
       ),
       
-      # Data Exploration - Teams
+      # Data Exploration - Team Summary
       tabItem(tabName = "teamSum",
               fluidRow(
                 column(width=6,
                   box(status = "primary",width=NULL,
                       tags$h3(textOutput("teamTitle")),
-                      textOutput("teamText"),
-                      #tags$img(src = uiOutput("logoURL"), width = "100px", height = "100px")
+                      textOutput("teamText")
+                      ),
+                  box(tabsetPanel(type = "tabs",
+                                  tabPanel("All", plotOutput("allWinPlot")),
+                                  tabPanel("Conference", plotOutput("confWinPlot")),
+                                  tabPanel("NonConference", plotOutput("nonConfWinPlot")),
+                                  tabPanel("Postseason", plotOutput("postWinPlot"))
+                                  ),
+                      width=NULL
+                      )
+                  #box(status = "primary",width=NULL,
+                  #    uiOutput("teamRecord")
+                  #    )
                   ),
-                  box(status = "primary",width=NULL,
-                      uiOutput("teamRecord")
-                  )
-                ),
                 column(width=6,
                   box(leafletOutput("mymap"),width=NULL,
+                      )
                   )
-                )
               ),
               fluidRow(
                 column(width = 12,
