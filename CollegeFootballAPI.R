@@ -225,6 +225,8 @@ venues <- venues %>% rename("venueId"=id,"venueName"=name,"venueCapacity"=capaci
                             "venueLat"=location.x,"venueLong"=location.y)
 ## Reduce venues list to active venues that are included in the games data set
 venues <- subset(venues, venueId %in% activeVenues)
+# Add a unique name variable of name + city + state
+venues <- mutate(venues,"venueUniqueName"=paste0(venueName," - ",venueCity,", ",venueState))
 # Make a joined data set between games and venues for validation
 gamesVenues <- left_join(games,venues,by="venueId")
 
@@ -240,6 +242,7 @@ getTalent <- GET(fullUrlTalent)
 getTalentText <- content(getTalent, "text")
 talent <- as_tibble(fromJSON(getTalentText, flatten = TRUE))
 talent <- talent %>% rename("season"=year)
+talent$talent <- round(as.numeric(talent$talent))
 # Duplicate and create data sets for joining to tables where 2 team columns exist
 talentTeam <- talent
 talentTeam <- talentTeam %>% rename("team"=school,"teamTalent"=talent)
