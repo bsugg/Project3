@@ -97,6 +97,33 @@ function(input, output, session) {
   })
   
   #####
+  ##### MODELING
+  #####
+  
+  # TALENT
+  
+  modelTeamTalent <- reactive({
+    # Filter on user selected team
+    gamesHome <- talentTeam %>% filter(team == input$team) %>%
+      filter(season >= input$sliderSeason[1]) %>%
+      filter(season <= input$sliderSeason[2])
+  })
+  
+  modelOppTalent <- reactive({
+    # Filter on user selected opponent for modeling
+    gamesHome <- talentTeam %>% filter(team == input$glmSelectOpp) %>%
+      filter(season >= input$sliderSeason[1]) %>%
+      filter(season <= input$sliderSeason[2])
+  })
+  
+  # VENUE
+  
+  modelVenue <- reactive({
+    # Filter on user selected venue
+    newVenue <- venues %>% filter(venueUniqueName == input$glmSelectVenue)
+  })
+  
+  #####
   ##### GAME STATS
   #####
   
@@ -275,5 +302,36 @@ function(input, output, session) {
     DT::datatable(newGames(),options = list(orderClasses = TRUE,pageLength = 5))
   })
   
+  ###
+  ### MODELING
+  ###
+  
+  # TALENT
+  
+  # Team talent slider, set average value from previous seasons
+  observe({
+    getTeamTalent <- modelTeamTalent()
+    avgTeamTalent <- as.integer(mean(getTeamTalent$teamTalent))
+    updateSliderInput(session,"glmSlideTTalent",value = avgTeamTalent)
+  })
+  # Opponent talent slider, set average value from previous seasons
+  observe({
+    getOppTalent <- modelOppTalent()
+    avgOppTalent <- as.integer(mean(getOppTalent$teamTalent))
+    updateSliderInput(session,"glmSlideOTalent",value = avgOppTalent)
+  })
+  
+  # VENUE
+  
+  # Venue selection, set max of crowd slider to venue capacity
+  observe({
+    getVenue <- modelVenue()
+    if (input$glmVenue == 1) {
+      capacity <- as.integer(getVenue$venueCapacity)
+      updateSliderInput(session,"glmSlideCrowd",value = capacity, max = capacity)
+    } else {
+      updateSliderInput(session,"glmSlideCrowd",value = 50000, max = 100000)
+    }
+  })
   
 }
