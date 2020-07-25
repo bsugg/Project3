@@ -34,7 +34,6 @@ function(input, output, session) {
     gamesSeasons <- bind_rows(gameSeasonsHome,gameSeasonsAway)
   })
   
-  
   #####
   ##### GAMES
   #####
@@ -47,37 +46,38 @@ function(input, output, session) {
       mutate(home=1) %>%
       mutate(away=0) %>%
       mutate(teamConference=as.character(ifelse(!is.na(home_conference),home_conference,"Other"))) %>%
-      mutate(teamPoints=home_points) %>%
-      mutate(won=ifelse(home_points>away_points,1,0)) %>%
-      mutate(loss=ifelse(home_points<away_points,1,0)) %>%
-      mutate(tie=ifelse(home_points==away_points,1,0)) %>%
+      mutate(teamPointsScored=home_points) %>%
+      mutate(won=as.integer(ifelse(home_points>away_points,1,0))) %>%
+      mutate(loss=as.integer(ifelse(home_points<away_points,1,0))) %>%
+      mutate(tie=as.integer(ifelse(home_points==away_points,1,0))) %>%
       mutate(opponent=away_team) %>%
       mutate(oppConference=as.character(ifelse(!is.na(away_conference),away_conference,"Other"))) %>%
-      mutate(oppPoints=away_points)
+      mutate(oppPointsScored=away_points)
     gamesAway <- games %>% filter(away_team == input$team) %>%
                            filter(season >= input$sliderSeason[1]) %>%
                            filter(season <= input$sliderSeason[2]) %>%
       mutate(home=0) %>%
       mutate(away=1) %>%
       mutate(teamConference=as.character(ifelse(!is.na(away_conference),away_conference,"Other"))) %>%
-      mutate(teamPoints=away_points) %>%
-      mutate(won=ifelse(away_points>home_points,1,0)) %>%
-      mutate(loss=ifelse(away_points<home_points,1,0)) %>%
-      mutate(tie=ifelse(home_points==away_points,1,0)) %>%
+      mutate(teamPointsScored=away_points) %>%
+      mutate(won=as.integer(ifelse(away_points>home_points,1,0))) %>%
+      mutate(loss=as.integer(ifelse(away_points<home_points,1,0))) %>%
+      mutate(tie=as.integer(ifelse(home_points==away_points,1,0))) %>%
       mutate(opponent=home_team) %>%
       mutate(oppConference=as.character(ifelse(!is.na(home_conference),home_conference,"Other"))) %>%
-      mutate(oppPoints=home_points)
+      mutate(oppPointsScored=home_points)
     # Merge the home and away sets into ONE games data set
     games <- bind_rows(gamesHome,gamesAway)
     # Add a few more attributes and sort by date
     games <- games %>% mutate(outcome=as.factor(ifelse(won==1,"Won",ifelse(loss==1,"Loss","Tie")))) %>%
                        mutate(team=input$team) %>%
-                       mutate(score=paste0(teamPoints,"-",oppPoints)) %>%
-                       mutate(margin=teamPoints-oppPoints) %>%
+                       mutate(score=paste0(teamPointsScored,"-",oppPointsScored)) %>%
+                       mutate(margin=teamPointsScored-oppPointsScored) %>%
                        mutate(location=ifelse(neutral_site,"Neutral",ifelse(home==1,"Home","Away"))) %>%
                        mutate(schedule=ifelse(teamConference=="Other" & oppConference=="Other",NA,
                                              ifelse(teamConference==oppConference,"Conference","NonConference"))
-                       )
+                       ) %>%
+                       rename("excitementIndex"=excitement_index)
     games <- arrange(games,kickoffDate)
     # Join with talent data sets
     games <- left_join(games,talentTeam,by=c("season","team"))
@@ -100,16 +100,18 @@ function(input, output, session) {
   ##### MODELING
   #####
   
+  ########## GLM #########
+  
   # TALENT
   
-  modelTeamTalent <- reactive({
+  glmModelTeamTalent <- reactive({
     # Filter on user selected team
     gamesHome <- talentTeam %>% filter(team == input$team) %>%
       filter(season >= input$sliderSeason[1]) %>%
       filter(season <= input$sliderSeason[2])
   })
   
-  modelOppTalent <- reactive({
+  glmModelOppTalent <- reactive({
     # Filter on user selected opponent for modeling
     gamesHome <- talentTeam %>% filter(team == input$glmSelectOpp) %>%
       filter(season >= input$sliderSeason[1]) %>%
@@ -118,10 +120,51 @@ function(input, output, session) {
   
   # VENUE
   
-  modelVenue <- reactive({
+  glmModelVenue <- reactive({
     # Filter on user selected venue
     newVenue <- venues %>% filter(venueUniqueName == input$glmSelectVenue)
   })
+  
+  # MODEL DATA SET
+  
+  glmModelData <- eventReactive(input$genGLM, {
+    getGames <- newGames()
+    getGames <- getGames %>% select(won,teamPointsScored,teamTalent,oppTalent,location,excitementIndex,
+                                          venueElevation,venueGrass,venueDome,venueLat,venueLong,attendance)
+    # Transform
+    getGames <- getGames %>% mutate("locHome"=as.integer(ifelse(location=="Home",1,0))) %>%
+      mutate("locAway"=as.integer(ifelse(location=="Away",1,0))) %>%
+      mutate("locNeutral"=as.integer(ifelse(location=="Neutral",1,0))) %>%
+      select(-location)
+    getGames$venueGrass <- as.integer(getGames$venueGrass)
+    getGames$venueDome <- as.integer(getGames$venueDome)
+    # Dynamic variable selection based on user input
+    if(input$glmTeamScore) {getGames} else{getGames <- select(getGames,-teamPointsScored)}
+    if(input$glmTeamTalent) {getGames} else{getGames <- select(getGames,-teamTalent)}
+    if(input$glmOppTalent) {getGames} else{getGames <- select(getGames,-oppTalent)}
+    if(input$glmLoc) {getGames} else{getGames <- getGames %>% select(-starts_with("loc"))}
+    if(input$glmExcite) {getGames} else{getGames <- select(getGames,-excitementIndex)}
+    if(input$glmVenue) {getGames} else{getGames <- getGames %>% select(-starts_with("venue"))}
+    if(input$glmCrowd) {getGames} else{getGames <- select(getGames,-attendance)}
+    # Remove records with NA values
+    getGames <- na.omit(getGames)
+    print(length(getGames$omit))
+    ## Data slicing for model fit later on
+    # Set seed for reproducible results
+    set.seed(1)
+    # Create the training and test sets
+    train <- sample(1:nrow(getGames),size=nrow(getGames)*0.7)
+    test <- dplyr::setdiff(1:nrow(getGames),train)
+    gamesTrain <- getGames[train, ]
+    gamesTrain <- gamesTrain %>% mutate("modelFitSet"="Train")
+    gamesTest <- getGames[test, ]
+    gamesTest <- gamesTest %>% mutate("modelFitSet"="Test")
+    # Merge back together, with new modelFitSet column
+    getGames <- bind_rows(gamesTrain,gamesTest)
+    return(getGames)
+  })
+  
+  ########## RF #########
   
   #####
   ##### GAME STATS
@@ -306,26 +349,46 @@ function(input, output, session) {
   ### MODELING
   ###
   
+  ########## GLM #########
+  
+  # TEAM SCORE
+  
+  # Team score selection, set average based on historical 
+  observe({
+    getGamesPro <- newGames()
+    avgPointValue <- as.integer(mean(getGamesPro$teamPointsScored))
+    updateSliderInput(session,"glmSlideScore",value = avgPointValue)
+  })
+  
   # TALENT
   
   # Team talent slider, set average value from previous seasons
   observe({
-    getTeamTalent <- modelTeamTalent()
+    getTeamTalent <- glmModelTeamTalent()
     avgTeamTalent <- as.integer(mean(getTeamTalent$teamTalent))
     updateSliderInput(session,"glmSlideTTalent",value = avgTeamTalent)
   })
   # Opponent talent slider, set average value from previous seasons
   observe({
-    getOppTalent <- modelOppTalent()
+    getOppTalent <- glmModelOppTalent()
     avgOppTalent <- as.integer(mean(getOppTalent$teamTalent))
     updateSliderInput(session,"glmSlideOTalent",value = avgOppTalent)
+  })
+  
+  # EXCITEMENT INDEX
+  
+  # Excitement index selection, set average based on historical 
+  observe({
+    getGamesPro <- newGames()
+    exciteValue <- as.integer(mean(getGamesPro$excitementIndex))
+    updateSliderInput(session,"glmSlideExcite",value = exciteValue)
   })
   
   # VENUE
   
   # Venue selection, set max of crowd slider to venue capacity
   observe({
-    getVenue <- modelVenue()
+    getVenue <- glmModelVenue()
     if (input$glmVenue == 1) {
       capacity <- as.integer(getVenue$venueCapacity)
       updateSliderInput(session,"glmSlideCrowd",value = capacity, max = capacity)
@@ -333,5 +396,31 @@ function(input, output, session) {
       updateSliderInput(session,"glmSlideCrowd",value = 50000, max = 100000)
     }
   })
+  
+  # THE MODEL
+  
+  #output$tableGlmModelData <- DT::renderDataTable({
+  #  DT::datatable(glmModelData(),options = list(orderClasses = TRUE,pageLength = 5))
+  #})
+  
+  output$tableGlmModelData <- DT::renderDataTable({
+    getGamesPro <- newGames()
+    getTeams <- newTeams()
+    customPrintName <- paste0(getTeams$abbreviation," Model Fit Data Set")
+    customFileName <- paste0(getTeams$abbreviation,"modelFitDataSet")
+    DT::datatable(glmModelData(),extensions = 'Buttons',
+                  options = list(orderClasses = TRUE, pageLength = 5,dom = 'Blfrtip',
+                                 lengthMenu = list(c(5,10,25,50,100,-1),c('5','10','25','50','100','All')),
+                                 buttons = c(list(list(extend = 'copy', title= "")),
+                                             list(list(extend = 'print', title= customPrintName)),
+                                             list(list(extend = 'csv', filename= customFileName)),
+                                             list(list(extend = 'excel',filename= customFileName,title= "")),
+                                             list(list(extend = 'pdf', filename= customFileName,title= customPrintName,orientation='landscape',pageSize= 'LEGAL'))
+                                 )
+                  )
+    )
+  })
+  
+  ########## RANDOM #########
   
 }

@@ -10,7 +10,7 @@ library(RColorBrewer)
 load("collegeFootball.Rdata")
 
 dashboardPage(
-  
+
   #
   ##
   ### HEADER
@@ -140,7 +140,8 @@ dashboardPage(
               fluidRow(
                 column(width = 12,
                        # Data table for export
-                       box(status = "primary",div(style = 'overflow-x: scroll', DT::dataTableOutput("teamTable")),width = NULL
+                       box(title="Team Summary Data Set",status = "primary",
+                           div(style = 'overflow-x: scroll', DT::dataTableOutput("teamTable")),width = NULL
                        )
                 )
               ) # end row
@@ -150,7 +151,8 @@ dashboardPage(
       tabItem(tabName = "games",
                fluidRow(
                  column(width = 12,
-                        box(div(style = 'overflow-x: scroll', DT::dataTableOutput("tableGames")),width = 12)
+                        box(title="Game Summary Data Set",status = "primary",
+                            div(style = 'overflow-x: scroll', DT::dataTableOutput("tableGames")),width = 12)
                  ) # end column
                ) # end fluidRow
              ), # END OF GAMES
@@ -164,32 +166,33 @@ dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(title="Generalized Linear Model",status="primary",width = NULL),
-                       box(title="Step 1: Generate Model",status="primary",width = NULL,
-                           checkboxInput("glmTeamScore", "Team Score", TRUE),
-                           checkboxInput("glmTeamTalent", "Team Talent", TRUE),
-                           checkboxInput("glmOppTalent", "Opponent Talent", TRUE),
-                           checkboxInput("glmLoc", "Location", TRUE),
-                           checkboxInput("glmExcite", "Excitement Index", TRUE),
+                       box(title="Step 1: Create Predictive Model",status="primary",width = NULL,collapsible = TRUE,
+                           checkboxInput("glmTeamScore", "Team Points Scored", TRUE),
+                           checkboxInput("glmTeamTalent", "Team Talent Level", TRUE),
+                           checkboxInput("glmOppTalent", "Opponent Talent Level", TRUE),
+                           checkboxInput("glmLoc", "Game Location", TRUE),
+                           checkboxInput("glmExcite", "Game Excitement Level", TRUE),
                            checkboxInput("glmVenue", "Venue Details", TRUE),
-                           checkboxInput("glmCrowd", "Crowd Size", TRUE)
+                           checkboxInput("glmCrowd", "Crowd Size", TRUE),
+                           actionButton("genGLM", "Create")
                            )
                 ), # end column
                 column(width = 4,
                        box(title="Some Image - Maybe mathJax Formula",status="primary",width = NULL),
                        
-                       box(title="Step 2: Predictor Inputs",status="primary",width = NULL,
+                       box(title="Step 2: Predictor Inputs",status="primary",width = NULL,collapsible = TRUE,
                            conditionalPanel(condition = "input.glmTeamScore == 1",
-                                            sliderInput("glmSlideScore", "Team Score",min=0, max=100,value=50)),
+                                            sliderInput("glmSlideScore", "Team Points Scored",min=0, max=80,value=40)),
                            conditionalPanel(condition = "input.glmTeamTalent == 1",
-                                            sliderInput("glmSlideTTalent", "Team Talent",min=0, max=1000,value=500)),
+                                            sliderInput("glmSlideTTalent", "Team Talent Level",min=0, max=1000,value=500)),
                            conditionalPanel(condition = "input.glmOppTalent == 1",
                                             selectizeInput("glmSelectOpp", "Opponent",
                                                            selected = "NC State", choices = levels(as.factor(teams$school))),
-                                            sliderInput("glmSlideOTalent", "Opponent Talent",min=0, max=1000,value=500)),
+                                            sliderInput("glmSlideOTalent", "Opponent Talent Level",min=0, max=1000,value=500)),
                            conditionalPanel(condition = "input.glmLoc == 1",
-                                            selectizeInput("glmSelectLoc", "Location", selected = "Home", choices = c("Home","Away","Neutral"))),
+                                            selectizeInput("glmSelectLoc", "Game Location", selected = "Home", choices = c("Home","Away","Neutral"))),
                            conditionalPanel(condition = "input.glmExcite == 1",
-                                            sliderInput("glmSlideExcite", "Excitement Index",min=0, max=10,value=5)),
+                                            sliderInput("glmSlideExcite", "Game Excitement Level",min=0, max=10,value=5)),
                            conditionalPanel(condition = "input.glmVenue == 1",
                                             selectizeInput("glmSelectVenue", "Venue",
                                                            selected = "Mercedes-Benz Stadium - Atlanta, GA", choices = levels(as.factor(venues$venueUniqueName)))),
@@ -200,6 +203,12 @@ dashboardPage(
                 ), # end column
                 column(width = 4,
                        box(title="A Bunch of Boxes with Metrics",status="primary",width = NULL)
+                ) # end column
+              ), # end fluidRow
+              fluidRow(
+                column(width = 12,
+                       box(title="Custom Data Set for Model Fit",status="primary",
+                           div(style = 'overflow-x: scroll', DT::dataTableOutput("tableGlmModelData")),width = 12)
                 ) # end column
               ) # end fluidRow
       ) # END OF GAMES
