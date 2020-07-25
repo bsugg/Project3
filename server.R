@@ -138,17 +138,75 @@ function(input, output, session) {
   
   # TEXT
   
+  # Team logo image
+  output$teamLogoPro <- renderUI({
+    tags$img(src=newTeams()$logos[1], width=200,style="display: block; margin-left: auto; margin-right: auto;")
+  })
+  
   # Set team name and mascot title
-  output$teamTitle <- renderText({
+  output$teamTitle1 <- renderText({
     getTeams <- newTeams()
-    teamName <- paste(getTeams$school,getTeams$mascot, sep = " ")
+    teamName <- paste(getTeams$school, sep = " ")
+  })
+  output$teamTitle2 <- renderText({
+    getTeams <- newTeams()
+    teamName <- paste(getTeams$mascot, sep = " ")
   })
   
   # Team introduction
   output$teamText <- renderText({
-    getGamesPro <- newGames()
+    getGames <- newGames()
     getTeams <- newTeams()
-    paste("The average body weight for order", input$team, "is", nrow(getGamesPro), sep = " ")
+    if (sum(getGames$location == "Home")>0) {
+      homeStatus <- paste0("")
+    } else{
+      homeStatus <- paste0("")
+    }
+    paste(homeStatus, sep = " ")
+  })
+  
+  output$seaBox <- renderValueBox({
+    getGames <- newGames()
+    valueBox(
+      length(unique(as.factor(getGames$season))), "Seasons", icon = icon("calendar-alt"),
+      color="light-blue"
+    )
+  })
+  output$gameBox <- renderValueBox({
+    getGames <- newGames()
+    valueBox(
+      nrow(getGames), "Total Games", icon = icon("football-ball"),
+      color="light-blue"
+    )
+  })
+  output$postBox <- renderValueBox({
+    getGames <- newGames()
+    getGamesPost <- filter(getGames,seasonType=="Postseason")
+    valueBox(
+      sum(getGamesPost$outcome == "Won"), "Postseason Wins", icon = icon("trophy"),
+      color="yellow"
+    )
+  })
+  output$winBox <- renderValueBox({
+    getGames <- newGames()
+    valueBox(
+      sum(getGames$outcome == "Won"), "Wins", icon = icon("check-circle"),
+      color="green"
+    )
+  })
+  output$lossBox <- renderValueBox({
+    getGames <- newGames()
+    valueBox(
+      sum(getGames$outcome == "Loss"), "Losses", icon = icon("times-circle"),
+      color="red"
+    )
+  })
+  output$winPctBox <- renderValueBox({
+    getGames <- newGames()
+    valueBox(
+      paste0(round(100*(sum(getGames$outcome == "Won")/nrow(getGames)),1)," %"), "Win Percentage", icon = icon("splotch"),
+      color="light-blue"
+    )
   })
   
   # Create plot

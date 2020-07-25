@@ -73,13 +73,15 @@ dashboardPage(
       # Information
       tabItem(tabName = "info",
               fluidRow(
-                box(title = "ST558 - Project 3", status = "primary",width=NULL,
-                  "Brian Sugg", br(),
-                  "July 27, 2020", br(),
-                  br(),
-                  "Describes the data and abilities of the app.", br(),
-                  br(),
-                  "Other dynamic text here."
+                column(width=12,
+                  box(title = "ST558 - Project 3", status = "primary",width=NULL,
+                    "Brian Sugg", br(),
+                    "July 27, 2020", br(),
+                    br(),
+                    "Describes the data and abilities of the app.", br(),
+                    br(),
+                    "Other dynamic text here."
+                  )
                 )
               )
       ),
@@ -87,31 +89,46 @@ dashboardPage(
       # Data Exploration - Team Summary
       tabItem(tabName = "teamSum",
               fluidRow(
-                column(width=6,
-                  box(status = "primary",width=NULL,
-                      tags$h3(textOutput("teamTitle")),
+                column(width=3,
+                       box(status = "primary",width=NULL,
+                           uiOutput("teamLogoPro", click = "Team Logo")
+                       ),
+                ),
+                column(width=3,
+                  box(title="Team Summary",status = "primary",width=NULL,height=224,
+                      tags$h2(textOutput("teamTitle1")),
+                      tags$h3(textOutput("teamTitle2")),
                       textOutput("teamText")
                       ),
-                  box(tabsetPanel(type = "tabs",
-                                  tabPanel("All", plotOutput("allWinPlot")),
-                                  tabPanel("Conference", plotOutput("confWinPlot")),
-                                  tabPanel("NonConference", plotOutput("nonConfWinPlot")),
-                                  tabPanel("Postseason", plotOutput("postWinPlot"))
-                                  ),
-                      width=NULL
-                      )
-                  #box(status = "primary",width=NULL,
-                  #    uiOutput("teamRecord")
-                  #    )
-                  ),
+                ),
                 column(width=6,
-                  box(leafletOutput("mymap"),width=NULL,
-                      )
+                  valueBoxOutput("seaBox"),
+                  valueBoxOutput("gameBox"),
+                  valueBoxOutput("postBox"),
+                  valueBoxOutput("winBox"),
+                  valueBoxOutput("lossBox"),
+                  valueBoxOutput("winPctBox")
                   )
+                ),
+              fluidRow(
+                column(width=6,
+                  box(status = "primary",tabsetPanel(type = "tabs",
+                                tabPanel("All", plotOutput("allWinPlot")),
+                                tabPanel("Conference", plotOutput("confWinPlot")),
+                                tabPanel("NonConference", plotOutput("nonConfWinPlot")),
+                                tabPanel("Postseason", plotOutput("postWinPlot"))
+                    ),width=NULL,height = 475
+                  )
+                ),
+                column(width=6,
+                       box(title="Geographic Coverage by Outcome",status = "primary",
+                           leafletOutput("mymap"),width=NULL,height = 475
+                       )
+                )
               ),
               fluidRow(
                 column(width = 12,
-                       box(div(style = 'overflow-x: scroll', DT::dataTableOutput("teamTable")),width = 12
+                       box(status = "primary",div(style = 'overflow-x: scroll', DT::dataTableOutput("teamTable")),width = NULL
                        )
                 )
               )
