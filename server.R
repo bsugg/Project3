@@ -123,6 +123,11 @@ function(input, output, session) {
       filter(season <= input$sliderSeason[2])
   })
   
+  glmOppTeam <- reactive({
+    # Filter on user selected opponent for logo
+    teamsOppLogo <- teams %>% filter(school == input$glmSelectOpp)
+  })
+  
   # VENUE
   
   glmModelVenue <- reactive({
@@ -169,6 +174,36 @@ function(input, output, session) {
       getGames <- bind_rows(gamesTrain,gamesTest)
     })
   
+  # CREATE USER PREDICTORS DATA SET
+  
+  glmUserData <- reactive({
+  userVenue <- glmModelVenue()
+  glmUserData <- data.frame("won"=factor("0",levels = c("0", "1")),"teamPointsScored"=as.numeric(0),
+                            "teamTalent"=as.numeric(0),"oppTalent"=as.numeric(0),"excitementIndex"=as.numeric(0),
+                            "venueElevation"=as.numeric(0),"venueGrass"=as.logical(FALSE),"venueDome"=as.logical(FALSE),
+                            "venueLat"=as.numeric(0),"venueLong"=as.numeric(0),"attendance"=as.integer(0),
+                            "locHome"=as.integer(0),"locAway"=as.integer(0),"locNeutral"=as.integer(0))
+  # UPDATE with USER PREDICOTRS
+  if(input$glmTeamScore) {glmUserData$teamPointsScored <- input$glmSlideScore} else{glmUserData <- select(glmUserData,-teamPointsScored)}
+  if(input$glmTeamTalent) {glmUserData$teamTalent <- as.numeric(input$glmSlideTTalent)} else{glmUserData <- select(glmUserData,-teamTalent)}
+  if(input$glmOppTalent) {glmUserData$oppTalent <- as.numeric(input$glmSlideOTalent)} else{glmUserData <- select(glmUserData,-oppTalent)}
+  if(input$glmLoc) {
+    if(input$glmSelectLoc=="Home") {glmUserData$locHome <- as.integer(1)
+    } else { if(input$glmSelectLoc=="Away") {glmUserData$locAway <- as.integer(1)
+    } else {glmUserData$locNeutral <- as.integer(1)}}
+  } else{glmUserData <- glmUserData %>% select(-starts_with("loc"))}
+  if(input$glmExcite) {glmUserData$excitementIndex <- as.numeric(input$glmSlideExcite)} else{glmUserData <- select(glmUserData,-excitementIndex)}
+  if(input$glmVenue) {
+    glmUserData$venueElevation <- userVenue$venueElevation
+    glmUserData$venueGrass <- userVenue$venueGrass
+    glmUserData$venueDome <- userVenue$venueDome
+    glmUserData$venueLat <- userVenue$venueLat
+    glmUserData$venueLong <- userVenue$venueLong
+  } else{glmUserData <- glmUserData %>% select(-starts_with("venue"))}
+  if(input$glmCrowd) {glmUserData$attendance <- input$glmSlideCrowd} else{glmUserData <- select(glmUserData,-attendance)}
+  return(glmUserData)
+  })
+  
   # MODEL FITTING AND USER PREDICTOR CREATION
   
   observeEvent(input$genGLM,{
@@ -179,6 +214,7 @@ function(input, output, session) {
       #  sugg <- eventReactive(input$coach, {
       gamesTrain <- glmModelData()
       userVenue <- glmModelVenue()
+      glmUserData <- glmUserData()
       gamesTrain <- gamesTrain %>% filter(modelFitSet=="Train") %>%
         select(-modelFitSet)
       gamesTest <- glmModelData()
@@ -197,30 +233,7 @@ function(input, output, session) {
       conMatrixGLM <- confusionMatrix(testPredGLM,gamesTest$won)
       print(conMatrixGLM)
       
-      # CREATE USER PREDICTORS DATA SET
-      glmUserData <- data.frame("won"=factor("0",levels = c("0", "1")),"teamPointsScored"=as.numeric(0),
-                      "teamTalent"=as.numeric(0),"oppTalent"=as.numeric(0),"excitementIndex"=as.numeric(0),
-                      "venueElevation"=as.numeric(0),"venueGrass"=as.logical(FALSE),"venueDome"=as.logical(FALSE),
-                      "venueLat"=as.numeric(0),"venueLong"=as.numeric(0),"attendance"=as.integer(0),
-                      "locHome"=as.integer(0),"locAway"=as.integer(0),"locNeutral"=as.integer(0))
-      # UPDATE with USER PREDICOTRS
-      if(input$glmTeamScore) {glmUserData$teamPointsScored <- input$glmSlideScore} else{glmUserData <- select(glmUserData,-teamPointsScored)}
-      if(input$glmTeamTalent) {glmUserData$teamTalent <- as.numeric(input$glmSlideTTalent)} else{glmUserData <- select(glmUserData,-teamTalent)}
-      if(input$glmOppTalent) {glmUserData$oppTalent <- as.numeric(input$glmSlideOTalent)} else{glmUserData <- select(glmUserData,-oppTalent)}
-      if(input$glmLoc) {
-        if(input$glmSelectLoc=="Home") {glmUserData$locHome <- as.integer(1)
-        } else { if(input$glmSelectLoc=="Away") {glmUserData$locAway <- as.integer(1)
-        } else {glmUserData$locNeutral <- as.integer(1)}}
-      } else{glmUserData <- glmUserData %>% select(-starts_with("loc"))}
-      if(input$glmExcite) {glmUserData$excitementIndex <- as.numeric(input$glmSlideExcite)} else{glmUserData <- select(glmUserData,-excitementIndex)}
-      if(input$glmVenue) {
-        glmUserData$venueElevation <- userVenue$venueElevation
-        glmUserData$venueGrass <- userVenue$venueGrass
-        glmUserData$venueDome <- userVenue$venueDome
-        glmUserData$venueLat <- userVenue$venueLat
-        glmUserData$venueLong <- userVenue$venueLong
-        } else{glmUserData <- glmUserData %>% select(-starts_with("venue"))}
-      if(input$glmCrowd) {glmUserData$attendance <- input$glmSlideCrowd} else{glmUserData <- select(glmUserData,-attendance)}
+
       
       print(str(glmUserData))
 
@@ -432,6 +445,33 @@ function(input, output, session) {
   
   ########## GLM #########
   
+  # Team logo image
+  output$teamLogoProGLM <- renderUI({
+    tags$img(src=newTeams()$logos[1], width=100,style="display: block; margin-left: auto; margin-right: auto;")
+  })
+  
+  # Opponent logo image
+  output$locForGLM <- renderUI({
+    if (input$glmLoc) {
+        tags$div(
+          HTML(paste(tags$h3(input$glmSelectLoc),tags$h4(tags$i("vs")))
+          )
+        )
+    } else{
+      tags$div(
+        HTML(paste(tags$h3("Anywhere"),tags$h4("vs"))
+        )
+      )
+    }
+  })
+  
+  # Opponent logo image
+  output$oppLogoProGLM <- renderUI({
+    if (input$glmOppTalent) {
+      tags$img(src=glmOppTeam()$logos[1], width=100,style="display: block; margin-left: auto; margin-right: auto;")
+    } else{tags$h3("Anyone")}
+  })
+  
   # TEAM SCORE
   
   # Team score selection, set average based on historical 
@@ -486,6 +526,26 @@ function(input, output, session) {
     customPrintName <- paste0(getTeams$abbreviation," Model Fit Data Set")
     customFileName <- paste0(getTeams$abbreviation,"modelFitDataSet")
     DT::datatable(glmModelData(),extensions = 'Buttons',
+                  options = list(orderClasses = TRUE, pageLength = 5,dom = 'Blfrtip',
+                                 lengthMenu = list(c(5,10,25,50,100,-1),c('5','10','25','50','100','All')),
+                                 buttons = c(list(list(extend = 'copy', title= "")),
+                                             list(list(extend = 'print', title= customPrintName)),
+                                             list(list(extend = 'csv', filename= customFileName)),
+                                             list(list(extend = 'excel',filename= customFileName,title= "")),
+                                             list(list(extend = 'pdf', filename= customFileName,title= customPrintName,orientation='landscape',pageSize= 'LEGAL'))
+                                 )
+                  )
+    )
+  })
+  
+  output$tableGlmUserData <- DT::renderDataTable({
+    getGamesPro <- newGames()
+    getTeams <- newTeams()
+    newGlmUserData <- glmUserData()
+    newGlmUserData <- newGlmUserData %>% select(-won)
+    customPrintName <- paste0(getTeams$abbreviation," User Predictors Data Set")
+    customFileName <- paste0(getTeams$abbreviation,"userPredictorsDataSet")
+    DT::datatable(newGlmUserData,extensions = 'Buttons',
                   options = list(orderClasses = TRUE, pageLength = 5,dom = 'Blfrtip',
                                  lengthMenu = list(c(5,10,25,50,100,-1),c('5','10','25','50','100','All')),
                                  buttons = c(list(list(extend = 'copy', title= "")),

@@ -152,7 +152,7 @@ dashboardPage(
                fluidRow(
                  column(width = 12,
                         box(title="Game Summary Data Set",status = "primary",
-                            div(style = 'overflow-x: scroll', DT::dataTableOutput("tableGames")),width = 12)
+                            div(style = 'overflow-x: scroll', DT::dataTableOutput("tableGames")),width = NULL)
                  ) # end column
                ) # end fluidRow
              ), # END OF GAMES
@@ -165,8 +165,28 @@ dashboardPage(
       tabItem(tabName = "modelGLM",
               fluidRow(
                 column(width = 4,
-                       box(title="Generalized Linear Model",status="primary",width = NULL),
-                       box(title="Step 1: Create Predictive Model",status="primary",width = NULL,collapsible = TRUE,
+                       box(title="Generalized Linear Model",status="primary",width = NULL,
+                           "Insert description on logistic regression and what this model predicts..."
+                           )
+                ), # end column
+                column(width = 4,
+                       box(title="Team",status="primary",width = 4,
+                           uiOutput("teamLogoProGLM")
+                           ),
+                       box(title="Location",status="primary",width = 4,height=163,align = "center",
+                           uiOutput("locForGLM")
+                           ),
+                       box(title="Opponent",status="primary",width = 4,height=163,align = "center",
+                           uiOutput("oppLogoProGLM")
+                           )
+                ), # end column
+                column(width = 4,
+                       box(title="Some Image - Maybe mathJax Formula",status="primary",width = NULL)
+                ), # end column
+              ), # end fluidRow
+              fluidRow(
+                column(width = 4,
+                       box(title="Step 1: Select Model Predictors",status="primary",width = NULL,collapsible = TRUE,
                            checkboxInput("glmTeamScore", "Team Points Scored", TRUE),
                            checkboxInput("glmTeamTalent", "Team Talent Level", TRUE),
                            checkboxInput("glmOppTalent", "Opponent Talent Level", TRUE),
@@ -176,12 +196,10 @@ dashboardPage(
                            checkboxInput("glmCrowd", "Crowd Size", TRUE),
                            actionButton("genGLM", "Create"),
                            actionButton("coach", "Coach")
-                           )
+                       )
                 ), # end column
                 column(width = 4,
-                       box(title="Some Image - Maybe mathJax Formula",status="primary",width = NULL),
-                       
-                       box(title="Step 2: Predictor Inputs",status="primary",width = NULL,collapsible = TRUE,
+                       box(title="Step 2: Adjust Model Predictors",status="primary",width = NULL,collapsible = TRUE,
                            conditionalPanel(condition = "input.glmTeamScore == 1",
                                             sliderInput("glmSlideScore", "Team Points Scored",min=0, max=80,value=40)),
                            conditionalPanel(condition = "input.glmTeamTalent == 1",
@@ -199,17 +217,23 @@ dashboardPage(
                                                            selected = "Mercedes-Benz Stadium - Atlanta, GA", choices = levels(as.factor(venues$venueUniqueName)))),
                            conditionalPanel(condition = "input.glmCrowd == 1",
                                             sliderInput("glmSlideCrowd", "Crowd Size",min=0, max=100000,value=50000))
-                           )
+                       )
                        
                 ), # end column
                 column(width = 4,
-                       box(title="A Bunch of Boxes with Metrics",status="primary",width = NULL)
+                       box(title="Step 3: Generate Model",status="primary",width=NULL,collapsible = TRUE,)
                 ) # end column
               ), # end fluidRow
               fluidRow(
                 column(width = 12,
                        box(title="Custom Data Set for Model Fit",status="primary",
-                           div(style = 'overflow-x: scroll', DT::dataTableOutput("tableGlmModelData")),width = 12)
+                           div(style = 'overflow-x: scroll', DT::dataTableOutput("tableGlmModelData")),width = NULL)
+                ) # end column
+              ), # end fluidRow
+              fluidRow(
+                column(width = 12,
+                       box(title="User Data Set for Prediction",status="primary",
+                           div(style = 'overflow-x: scroll', DT::dataTableOutput("tableGlmUserData")),width = NULL)
                 ) # end column
               ) # end fluidRow
       ) # END OF GAMES
