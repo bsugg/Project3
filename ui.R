@@ -51,7 +51,7 @@ dashboardPage(
                ),
       menuItem("Data", tabName = "data", icon = icon("th")),
       menuItem("Source API", icon = icon("file-code-o"),href = "https://collegefootballdata.com/"),
-      uiOutput("teamLogo", click = "Team Logo"),
+      uiOutput("teamLogo"),
       selectizeInput("team", "Team",
                   selected = "North Carolina", choices = levels(as.factor(teams$school))
       ),
@@ -112,11 +112,11 @@ dashboardPage(
                 column(width=3,
                        # Logo
                        box(status = "primary",width=NULL,
-                           uiOutput("teamLogoPro", click = "Team Logo")
+                           uiOutput("teamLogoPro")
                        ),
                 ), # end column, continue row
                 column(width=3,
-                       # Team name and mascot
+                  # Team name and mascot name
                   box(title="",status = "primary",width=NULL,height=224,
                       tags$h2(textOutput("teamTitle1")),
                       tags$h3(textOutput("teamTitle2")),
@@ -124,7 +124,7 @@ dashboardPage(
                       ),
                 ), # end column, continue row
                 column(width=6,
-                       # Top right corner metric boxes
+                  # Top right corner metric boxes
                   valueBoxOutput("seaBox"),
                   valueBoxOutput("gameBox"),
                   valueBoxOutput("postBox"),
@@ -146,8 +146,8 @@ dashboardPage(
                 ), # end column
                 column(width=6,
                        # Map of wins and losses
-                       box(title="Geographic Coverage by Outcome",status = "primary",
-                           leafletOutput("mymap"),width=NULL,height = 475
+                       box(title="Geographic Coverage by Outcome - Clickable",status = "primary",
+                           leafletOutput("gamesMap"),width=NULL,height = 475
                        )
                 ) # end column
               ), # end fluidRow
@@ -187,10 +187,10 @@ dashboardPage(
                        box(title="Team",status="primary",width = 4,
                            uiOutput("teamLogoProGLM")
                            ),
-                       box(title="Location",status="primary",width = 4,height=163,align = "center",
+                       box(id="glmBoxLoc",title="Location",status="primary",width = 4,height=163,align = "center",collapsible = TRUE,collapsed = TRUE,
                            uiOutput("locForGLM")
                            ),
-                       box(title="Opponent",status="primary",width = 4,height=163,align = "center",
+                       box(id="glmBoxOpp",title="Opponent",status="primary",width = 4,height=163,align = "center",collapsible = TRUE,collapsed = TRUE,
                            uiOutput("oppLogoProGLM")
                            )
                 ), # end column

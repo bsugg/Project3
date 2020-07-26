@@ -102,12 +102,11 @@ function(input, output, session) {
     
     # Filter data based on manual selections of season type and schedule from user
     if (input$selectSeasonType!="All") {
-      
       gamesVenuesJoin <- filter(gamesVenuesJoin,seasonType == input$selectSeasonType)
-    } else {return(gamesVenuesJoin)}
+    } else {gamesVenuesJoin}
     if (input$selectSchedule!="All") {
       gamesVenuesJoin <- filter(gamesVenuesJoin,schedule == input$selectSchedule)
-    } else {return(gamesVenuesJoin)}
+    } else {gamesVenuesJoin}
   })
   
   #####
@@ -246,6 +245,8 @@ function(input, output, session) {
     js$collapse("glmStep1")
     js$collapse("glmStep2")
     js$collapse("glmStep3")
+    js$collapse("glmBoxLoc")
+    js$collapse("glmBoxOpp")
   })
 
   # GLM Predict Button Actions
@@ -257,10 +258,12 @@ function(input, output, session) {
   
   # GLM Reset Button Actions
   
-  glmMakePrediction <- observeEvent(input$glmReset,{
+  glmMakeReset <- observeEvent(input$glmReset,{
     js$collapse("glmStep1")
     js$collapse("glmStep2")
     js$collapse("glmStep3")
+    js$collapse("glmBoxLoc")
+    js$collapse("glmBoxOpp")
     # Reset all inputs from Step 1
     reset("glmTeamScore")
     reset("glmTeamTalent")
@@ -347,12 +350,20 @@ function(input, output, session) {
     tags$img(src=newTeams()$logos[1], width=150,style="display: block; margin-left: auto; margin-right: auto;")
   })
   
-  # Season slider, set min and max properties
+  # Season slider, set min and max properties based on available data
   observe({
     getSeasons <- seasonFinder()
     minSeason <- min(getSeasons$season)
     maxSeason <- max(getSeasons$season)
     updateSliderInput(session,"sliderSeason",min=minSeason,max=maxSeason,value = c(minSeason, maxSeason))
+  })
+  
+  # Game type selections, reset defaults when "auto"
+  observe({
+    if (input$radioGameSelect == 'auto') {
+      reset("selectSeasonType")
+      reset("selectSchedule")
+    } else{}
   })
   
   #####
@@ -451,7 +462,7 @@ function(input, output, session) {
   
   # MAP
   
-  output$mymap <- renderLeaflet({
+  output$gamesMap <- renderLeaflet({
     getGamesPro <- newGames()
     points <- cbind(getGamesPro$venueLong,getGamesPro$venueLat)
     
