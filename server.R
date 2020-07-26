@@ -12,6 +12,7 @@ library(randomForest)
 library(gbm)
 library(shinyjs)
 library(V8)
+library(mathjaxr)
 
 # Call data generated from save function within the "CollegeFootballAPI.R" file
 load("collegeFootball.Rdata")
@@ -217,9 +218,12 @@ function(input, output, session) {
   # GLM Create Button Actions
   
   glmCreateModel <- observeEvent(input$glmCreate,{
+    # Launch progress bar
+    withProgress(message = 'Fitting model...', value = 0,{ 
     gamesTrain <- glmModelData()
     userVenue <- glmModelVenue()
     glmUserData <- glmUserData()
+    incProgress(1/3, detail = "Splitting data...")
     gamesTrain <- gamesTrain %>% filter(modelFitSet=="Train") %>%
       select(-modelFitSet)
     gamesTest <- glmModelData()
@@ -229,22 +233,53 @@ function(input, output, session) {
     glmReValue$train <- gamesTrain
     glmReValue$test <- gamesTest
     # 1. Use trainControl() function to control computations and set number of desired folds for cross validation
-    trctrl <- trainControl(method = "repeatedcv", number = 3, repeats = 3)
+    trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
     # 2. Set a seed for reproducible result
     set.seed(3333)
+    incProgress(2/3, detail = "Training model for best results, please be patient...")
     # 3. Use train() function to determine a generalized linear regression model of best fit
     logReg_fit <- train(won ~ ., data = gamesTrain, method = "glm", family="binomial", trControl=trctrl, preProcess = c("center", "scale"), tuneLength = 10)
+    incProgress(3/3, detail = "Testing model...")
     # 4. Test newly created model against the test set and generate confusion matric for performance metrics
     testPredGLM <- predict(logReg_fit, newdata = gamesTest)
     conMatrixGLM <- confusionMatrix(testPredGLM,gamesTest$won)
     userPredGLM <- predict(logReg_fit, newdata = glmUserData)
     # Add the model and confusion matrix test accuracy figure to the reactive value
     glmReValue$model <- logReg_fit
+    glmReValue$finalModel <- logReg_fit$finalModel
+    glmReValue$numVar <- as.character(length(logReg_fit[[22]]))
     glmReValue$accuracy <- conMatrixGLM[[3]][[1]]
+    # Finish progress bar
+    })
     print("Model created and values stored.")
+    
+    output$glmAccBox <- renderValueBox({
+      acc <- round(glmReValue$accuracy*100,1)
+      if (glmReValue$accuracy<.5) {
+        valueBox(
+          acc, "Accuracy", icon = icon("percent"),
+          color="red")
+      } else{ if (glmReValue$accuracy<.75) {
+        valueBox(
+          acc, "Accuracy", icon = icon("percent"),
+          color="yellow")
+      } else{
+        valueBox(
+          acc, "Accuracy", icon = icon("percent"),
+          color="green")}
+      }
+    })
+    
+    output$glmNumVar <- renderValueBox({
+          valueBox(
+            glmReValue$numVar, "Predictors", icon = icon("hashtag"),
+          color="light-blue")
+    })
+    
     js$collapse("glmStep1")
     js$collapse("glmStep2")
     js$collapse("glmStep3")
+    js$collapse("glmReset")
     js$collapse("glmBoxLoc")
     js$collapse("glmBoxOpp")
   })
@@ -253,7 +288,21 @@ function(input, output, session) {
   
   glmMakePrediction <- observeEvent(input$glmPredict,{
     userPredGLM <- predict(glmReValue$model, newdata = glmUserData())
+    glmReValue$userPredict <- userPredGLM
     print(userPredGLM)
+    
+    # Value box values
+    output$glmPredictBox <- renderValueBox({
+      outcome <- ifelse(glmReValue$userPredict==1,"Win","Lose")
+      if (outcome=="Win") {
+        valueBox(
+          outcome, "Prediction", icon = icon("check-circle"),
+          color="green")
+      } else{
+        valueBox(
+          outcome, "Prediction", icon = icon("times-circle"),
+          color="red")}
+    })
   })
   
   # GLM Reset Button Actions
@@ -262,6 +311,7 @@ function(input, output, session) {
     js$collapse("glmStep1")
     js$collapse("glmStep2")
     js$collapse("glmStep3")
+    js$collapse("glmReset")
     js$collapse("glmBoxLoc")
     js$collapse("glmBoxOpp")
     # Reset all inputs from Step 1
@@ -275,6 +325,22 @@ function(input, output, session) {
     reset("glmSelectOpp")
     reset("glmSelectLoc")
     reset("glmSelectVenue")
+    # Reset value boxes
+    output$glmPredictBox <- renderValueBox({
+        valueBox(
+          "","",color="light-blue"
+          )
+    })
+    output$glmAccBox <- renderValueBox({
+      valueBox(
+        "","",color="light-blue"
+      )
+    })
+    output$glmNumVar <- renderValueBox({
+      valueBox(
+        "","",color="light-blue"
+      )
+    })
     # TEAM SCORE
     
     # Team score selection, set average based on historical 
@@ -403,6 +469,7 @@ function(input, output, session) {
     paste(homeStatus, sep = " ")
   })
   
+  # Value box render in top right hand corner
   output$seaBox <- renderValueBox({
     getGames <- newGames()
     valueBox(
@@ -521,7 +588,7 @@ function(input, output, session) {
   
   # Team logo image
   output$teamLogoProGLM <- renderUI({
-    tags$img(src=newTeams()$logos[1], width=100,style="display: block; margin-left: auto; margin-right: auto;")
+    tags$img(src=newTeams()$logos[1], width=90,style="display: block; margin-left: auto; margin-right: auto;")
   })
   
   # Location status
@@ -542,8 +609,26 @@ function(input, output, session) {
   # Opponent logo image
   output$oppLogoProGLM <- renderUI({
     if (input$glmOppTalent) {
-      tags$img(src=glmOppTeam()$logos[1], width=100,style="display: block; margin-left: auto; margin-right: auto;")
+      tags$img(src=glmOppTeam()$logos[1], width=90,style="display: block; margin-left: auto; margin-right: auto;")
     } else{tags$h3("Anyone")}
+  })
+  
+  # Model training process text
+  output$glmTrainProcess <- renderUI({
+    getModelData <- glmModelData()
+    nTotal <- nrow(newGames())
+    nFit <- nrow(glmModelData())
+    nTrain <- sum(getModelData$modelFitSet == "Train")
+    nTest <- sum(getModelData$modelFitSet == "Test")
+      
+    tags$div(HTML(paste("Your custom filtered data set is split into a",tags$i("model training"),"set (70%) and a",tags$i("model testing"),"set (30%). The",
+                        tags$i("model training"),"set undergoes k-fold cross validation for the model fit. The fitted model is selected automatically by the",
+                        tags$code("caret"),"package based on resulting accuracy. Final accuracy is determined by applying the model to the",
+                        tags$i("testing set"),".",tags$br(),
+                        tags$b(nTotal),"total records considered:",tags$b(nTotal-nFit),"records omitted containing",tags$code("NA"),",",tags$b(nTrain),
+                        "records in the training set, and",tags$b(nTest),"records in the testing set.")
+    )
+    )
   })
   
   # TEAM SCORE

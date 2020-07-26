@@ -5,6 +5,7 @@ library(leaflet)
 library(RColorBrewer)
 library(shinyjs)
 library(V8)
+library(mathjaxr)
 
 # Shinydashboard information here https://rstudio.github.io/shinydashboard/index.html
 # Icons sourced from https://fontawesome.com/icons?d=gallery&m=free
@@ -178,24 +179,28 @@ dashboardPage(
       # MODEL - GLM
       tabItem(tabName = "modelGLM",
               fluidRow(
-                column(width = 4,
-                       box(title="Generalized Linear Model",status="primary",width = NULL,
+                column(width = 3,
+                       box(title="Generalized Linear Model",status="primary",width = NULL,height=283,
                            "Insert description on logistic regression and what this model predicts..."
                            )
                 ), # end column
-                column(width = 4,
-                       box(title="Team",status="primary",width = 4,
+                column(width = 6,
+                       box(title="Team",status="primary",width = 4,height=160,
                            uiOutput("teamLogoProGLM")
                            ),
-                       box(id="glmBoxLoc",title="Location",status="primary",width = 4,height=163,align = "center",collapsible = TRUE,collapsed = TRUE,
+                       box(id="glmBoxLoc",title="Location",status="primary",width = 4,height=160,align = "center",collapsible = TRUE,collapsed = TRUE,
                            uiOutput("locForGLM")
                            ),
-                       box(id="glmBoxOpp",title="Opponent",status="primary",width = 4,height=163,align = "center",collapsible = TRUE,collapsed = TRUE,
+                       box(id="glmBoxOpp",title="Opponent",status="primary",width = 4,height=160,align = "center",collapsible = TRUE,collapsed = TRUE,
                            uiOutput("oppLogoProGLM")
-                           )
+                           ),
+                       valueBoxOutput("glmPredictBox"),
+                       valueBoxOutput("glmAccBox"),
+                       valueBoxOutput("glmNumVar")
                 ), # end column
-                column(width = 4,
-                       box(title="Some Image - Maybe mathJax Formula",status="primary",width = NULL)
+                column(width = 3,
+                       box(title="Model Training Process",status="primary",width = NULL,height=283,
+                          uiOutput("glmTrainProcess"))
                 ), # end column
               ), # end fluidRow
               fluidRow(
@@ -237,8 +242,9 @@ dashboardPage(
                 ), # end column
                 column(width = 4,
                        box(id="glmStep3",title="Step 3: Generate Prediction",status="primary",width=NULL,collapsible = TRUE,collapsed=TRUE,
-                           "Make a prediction from the last generated model:",br(),
-                           actionButton("glmPredict", "Predict"),br(),br(),
+                           "Make a prediction from the selected predictors and the last generated model:",br(),
+                           actionButton("glmPredict", "Predict")),
+                       box(id="glmReset",title="Reset",status="primary",width=NULL,collapsible = TRUE,collapsed=TRUE,
                            "Return to Step 1 and create a new model:",br(),
                            actionButton("glmReset", "Reset"))
                 ) # end column
