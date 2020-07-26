@@ -613,6 +613,16 @@ function(input, output, session) {
     } else{tags$h3("Anyone")}
   })
   
+  # Model introduction
+  output$glmIntro <- renderUI({
+    tags$div(HTML(paste(tags$strong("Purpose:"),"Predicting the outcome of a college football game, with a binary response of either 1",tags$i("- Win"),
+                        ", or 0",tags$i("- Lose"),".",tags$br(),tags$br(),
+                        tags$strong("Model Type:"),"Logistic Regression",tags$br(),tags$br(),
+                        tags$strong("Model Description:"),"Description here...")
+    )
+    )
+  })
+  
   # Model training process text
   output$glmTrainProcess <- renderUI({
     getModelData <- glmModelData()
@@ -621,7 +631,7 @@ function(input, output, session) {
     nTrain <- sum(getModelData$modelFitSet == "Train")
     nTest <- sum(getModelData$modelFitSet == "Test")
       
-    tags$div(HTML(paste("Your custom filtered data set is split into a",tags$i("model training"),"set (70%) and a",tags$i("model testing"),"set (30%). The",
+    tags$div(HTML(paste("The custom filtered data set is split into a",tags$i("model training"),"set (70%) and a",tags$i("model testing"),"set (30%). The",
                         tags$i("model training"),"set undergoes k-fold cross validation for the model fit. The fitted model is selected automatically by the",
                         tags$code("caret"),"package based on resulting accuracy. Final accuracy is determined by applying the model to the",
                         tags$i("testing set"),".",tags$br(),

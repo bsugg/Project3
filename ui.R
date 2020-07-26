@@ -181,8 +181,7 @@ dashboardPage(
               fluidRow(
                 column(width = 3,
                        box(title="Generalized Linear Model",status="primary",width = NULL,height=283,
-                           "Insert description on logistic regression and what this model predicts..."
-                           )
+                           uiOutput("glmIntro"))
                 ), # end column
                 column(width = 6,
                        box(title="Team",status="primary",width = 4,height=160,
