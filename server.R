@@ -176,7 +176,6 @@ function(input, output, session) {
       if(input$glmCrowd) {getGames} else{getGames <- select(getGames,-attendance)}
       # Remove records with NA values
       getGames <- as.data.frame(na.omit(getGames))
-      print(str(getGames))
       ## Data slicing for model fit later on
       # Set seed for reproducible results
       set.seed(1)
@@ -261,7 +260,6 @@ function(input, output, session) {
     glmReValue$accuracy <- conMatrixGLM[[3]][[1]]
     # Finish progress bar
     })
-    print("Model created and values stored.")
     
     output$glmAccBox <- renderValueBox({
       acc <- round(glmReValue$accuracy*100,1)
@@ -299,7 +297,6 @@ function(input, output, session) {
   glmMakePrediction <- observeEvent(input$glmPredict,{
     userPredGLM <- predict(glmReValue$model, newdata = glmUserData())
     glmReValue$userPredict <- userPredGLM
-    print(userPredGLM)
     
     # Value box values
     output$glmPredictBox <- renderValueBox({
@@ -396,14 +393,280 @@ function(input, output, session) {
         updateSliderInput(session,"glmSlideCrowd",value = 50000, max = 100000)
       }
     })
-    
-    
   })
   
   #########################
   ########## RF ###########
   #########################
   
+  # TALENT
+  
+  rfModelTeamTalent <- reactive({
+    # Filter on user selected team
+    gamesHome <- talentTeam %>% filter(team == input$team) %>%
+      filter(season >= input$sliderSeason[1]) %>%
+      filter(season <= input$sliderSeason[2])
+  })
+  
+  rfModelOppTalent <- reactive({
+    # Filter on user selected opponent for modeling
+    gamesHome <- talentTeam %>% filter(team == input$rfSelectOpp) %>%
+      filter(season >= input$sliderSeason[1]) %>%
+      filter(season <= input$sliderSeason[2])
+  })
+  
+  rfOppTeam <- reactive({
+    # Filter on user selected opponent for logo
+    teamsOppLogo <- teams %>% filter(school == input$rfSelectOpp)
+  })
+  
+  # VENUE
+  
+  rfModelVenue <- reactive({
+    # Filter on user selected venue
+    newVenue <- venues %>% filter(venueUniqueName == input$rfSelectVenue)
+  })
+  
+  # MODEL DATA SET
+  
+  rfModelData <- reactive({
+    getGames <- newGames()
+    getGames <- getGames %>% select(won,teamPointsScored,teamTalent,oppTalent,location,excitementIndex,
+                                    venueElevation,venueGrass,venueDome,venueLat,venueLong,attendance)
+    # Transform
+    getGames <- getGames %>% mutate("locHome"=as.integer(ifelse(location=="Home",1,0))) %>%
+      mutate("locAway"=as.integer(ifelse(location=="Away",1,0))) %>%
+      mutate("locNeutral"=as.integer(ifelse(location=="Neutral",1,0))) %>%
+      select(-location)
+    getGames$won <- as.factor(getGames$won)
+    # Dynamic variable selection based on user input
+    if(input$rfTeamScore) {getGames} else{getGames <- select(getGames,-teamPointsScored)}
+    if(input$rfTeamTalent) {getGames} else{getGames <- select(getGames,-teamTalent)}
+    if(input$rfOppTalent) {getGames} else{getGames <- select(getGames,-oppTalent)}
+    if(input$rfLoc) {getGames} else{getGames <- getGames %>% select(-starts_with("loc"))}
+    if(input$rfExcite) {getGames} else{getGames <- select(getGames,-excitementIndex)}
+    if(input$rfVenue) {getGames} else{getGames <- getGames %>% select(-starts_with("venue"))}
+    if(input$rfCrowd) {getGames} else{getGames <- select(getGames,-attendance)}
+    # Remove records with NA values
+    getGames <- as.data.frame(na.omit(getGames))
+    ## Data slicing for model fit later on
+    # Set seed for reproducible results
+    set.seed(1)
+    # Create the training and test sets
+    train <- sample(1:nrow(getGames),size=nrow(getGames)*0.7)
+    test <- dplyr::setdiff(1:nrow(getGames),train)
+    gamesTrain <- getGames[train, ]
+    gamesTrain <- gamesTrain %>% mutate("modelFitSet"="Train")
+    gamesTest <- getGames[test, ]
+    gamesTest <- gamesTest %>% mutate("modelFitSet"="Test")
+    # Merge back together, with new modelFitSet column
+    getGames <- bind_rows(gamesTrain,gamesTest)
+  })
+  
+  # CREATE USER PREDICTORS DATA SET
+  
+  rfUserData <- reactive({
+    userVenue <- rfModelVenue()
+    rfUserData <- data.frame("won"=factor("0",levels = c("0", "1")),"teamPointsScored"=as.numeric(0),
+                              "teamTalent"=as.numeric(0),"oppTalent"=as.numeric(0),"excitementIndex"=as.numeric(0),
+                              "venueElevation"=as.numeric(0),"venueGrass"=as.logical(FALSE),"venueDome"=as.logical(FALSE),
+                              "venueLat"=as.numeric(0),"venueLong"=as.numeric(0),"attendance"=as.integer(0),
+                              "locHome"=as.integer(0),"locAway"=as.integer(0),"locNeutral"=as.integer(0))
+    # UPDATE with USER PREDICOTRS
+    if(input$rfTeamScore) {rfUserData$teamPointsScored <- input$rfSlideScore} else{rfUserData <- select(rfUserData,-teamPointsScored)}
+    if(input$rfTeamTalent) {rfUserData$teamTalent <- as.numeric(input$rfSlideTTalent)} else{rfUserData <- select(rfUserData,-teamTalent)}
+    if(input$rfOppTalent) {rfUserData$oppTalent <- as.numeric(input$rfSlideOTalent)} else{rfUserData <- select(rfUserData,-oppTalent)}
+    if(input$rfLoc) {
+      if(input$rfSelectLoc=="Home") {rfUserData$locHome <- as.integer(1)
+      } else { if(input$rfSelectLoc=="Away") {rfUserData$locAway <- as.integer(1)
+      } else {rfUserData$locNeutral <- as.integer(1)}}
+    } else{rfUserData <- rfUserData %>% select(-starts_with("loc"))}
+    if(input$rfExcite) {rfUserData$excitementIndex <- as.numeric(input$rfSlideExcite)} else{rfUserData <- select(rfUserData,-excitementIndex)}
+    if(input$rfVenue) {
+      rfUserData$venueElevation <- userVenue$venueElevation
+      rfUserData$venueGrass <- userVenue$venueGrass
+      rfUserData$venueDome <- userVenue$venueDome
+      rfUserData$venueLat <- userVenue$venueLat
+      rfUserData$venueLong <- userVenue$venueLong
+    } else{rfUserData <- rfUserData %>% select(-starts_with("venue"))}
+    if(input$rfCrowd) {rfUserData$attendance <- input$rfSlideCrowd} else{rfUserData <- select(rfUserData,-attendance)}
+    return(rfUserData)
+  })
+  
+  # MODEL FITTING AND USER PREDICTOR CREATION
+  
+  rfReValue <- reactiveValues()
+  
+  # RF Create Button Actions
+  
+  rfCreateModel <- observeEvent(input$rfCreate,{
+    # Launch progress bar
+    withProgress(message = 'Fitting model...', value = 0,{ 
+      gamesTrain <- rfModelData()
+      userVenue <- rfModelVenue()
+      rfUserData <- rfUserData()
+      incProgress(1/3, detail = "Splitting data...")
+      gamesTrain <- gamesTrain %>% filter(modelFitSet=="Train") %>%
+        select(-modelFitSet)
+      gamesTest <- rfModelData()
+      gamesTest <- gamesTest %>% filter(modelFitSet=="Test") %>%
+        select(-modelFitSet)
+      # Add the test and train data sets to the reactive value
+      rfReValue$train <- gamesTrain
+      rfReValue$test <- gamesTest
+      # 1. Use trainControl() function to control computations and set number of desired folds for cross validation
+      trctrl <- trainControl(method = "repeatedcv", number = 4, repeats = 3)
+      # 2. Set a seed for reproducible result
+      set.seed(3333)
+      incProgress(2/3, detail = "Training model for best results. Growing trees takes time, please be patient...")
+      # 3. Use train() function to determine a generalized linear regression model of best fit
+      randFor_fit <- train(won ~ ., data = gamesTrain, method = "rf", trControl=trctrl, preProcess = c("center", "scale"), tuneLength = 10)
+      incProgress(3/3, detail = "Testing model...")
+      # 4. Test newly created model against the test set and generate confusion matric for performance metrics
+      testPredRF <- predict(randFor_fit, newdata = gamesTest)
+      conMatrixRF <- confusionMatrix(testPredRF,gamesTest$won)
+      userPredRF <- predict(randFor_fit, newdata = rfUserData)
+      # Add the model and confusion matrix test accuracy figure to the reactive value
+      rfReValue$model <- randFor_fit
+      rfReValue$finalModel <- randFor_fit$finalModel
+      rfReValue$numVar <- as.character(length(randFor_fit[[22]]))
+      rfReValue$accuracy <- conMatrixRF[[3]][[1]]
+      # Finish progress bar
+    })
+    
+    output$rfAccBox <- renderValueBox({
+      acc <- round(rfReValue$accuracy*100,1)
+      if (rfReValue$accuracy<.5) {
+        valueBox(
+          acc, "Accuracy", icon = icon("percent"),
+          color="red")
+      } else{ if (rfReValue$accuracy<.75) {
+        valueBox(
+          acc, "Accuracy", icon = icon("percent"),
+          color="yellow")
+      } else{
+        valueBox(
+          acc, "Accuracy", icon = icon("percent"),
+          color="green")}
+      }
+    })
+    
+    output$rfNumVar <- renderValueBox({
+      valueBox(
+        rfReValue$numVar, "Predictors", icon = icon("hashtag"),
+        color="light-blue")
+    })
+    
+    js$collapse("rfStep1")
+    js$collapse("rfStep2")
+    js$collapse("rfStep3")
+    js$collapse("rfReset")
+    js$collapse("rfBoxLoc")
+    js$collapse("rfBoxOpp")
+  })
+  
+  # RF Predict Button Actions
+  
+  rfMakePrediction <- observeEvent(input$rfPredict,{
+    userPredRF <- predict(rfReValue$model, newdata = rfUserData())
+    rfReValue$userPredict <- userPredRF
+    
+    # Value box values
+    output$rfPredictBox <- renderValueBox({
+      outcome <- ifelse(rfReValue$userPredict==1,"Win","Lose")
+      if (outcome=="Win") {
+        valueBox(
+          outcome, "Prediction", icon = icon("check-circle"),
+          color="green")
+      } else{
+        valueBox(
+          outcome, "Prediction", icon = icon("times-circle"),
+          color="red")}
+    })
+  })
+  
+  # RF Reset Button Actions
+  
+  rfMakeReset <- observeEvent(input$rfReset,{
+    js$collapse("rfStep1")
+    js$collapse("rfStep2")
+    js$collapse("rfStep3")
+    js$collapse("rfReset")
+    js$collapse("rfBoxLoc")
+    js$collapse("rfBoxOpp")
+    # Reset all inputs from Step 1
+    reset("rfTeamScore")
+    reset("rfTeamTalent")
+    reset("rfOppTalent")
+    reset("rfLoc")
+    reset("rfExcite")
+    reset("rfVenue")
+    reset("rfCrowd")
+    reset("rfSelectOpp")
+    reset("rfSelectLoc")
+    reset("rfSelectVenue")
+    # Reset value boxes
+    output$rfPredictBox <- renderValueBox({
+      valueBox(
+        "","",color="light-blue"
+      )
+    })
+    output$rfAccBox <- renderValueBox({
+      valueBox(
+        "","",color="light-blue"
+      )
+    })
+    output$rfNumVar <- renderValueBox({
+      valueBox(
+        "","",color="light-blue"
+      )
+    })
+    # TEAM SCORE
+    
+    # Team score selection, set average based on historical 
+    observe({
+      getGamesPro <- newGames()
+      avgPointValue <- as.integer(mean(getGamesPro$teamPointsScored))
+      updateSliderInput(session,"rfSlideScore",value = avgPointValue)
+    })
+    
+    # TALENT
+    
+    # Team talent slider, set average value from previous seasons
+    observe({
+      getTeamTalent <- rfModelTeamTalent()
+      avgTeamTalent <- as.integer(mean(getTeamTalent$teamTalent))
+      updateSliderInput(session,"rfSlideTTalent",value = avgTeamTalent)
+    })
+    # Opponent talent slider, set average value from previous seasons
+    observe({
+      getOppTalent <- rfModelOppTalent()
+      avgOppTalent <- as.integer(mean(getOppTalent$teamTalent))
+      updateSliderInput(session,"rfSlideOTalent",value = avgOppTalent)
+    })
+    
+    # EXCITEMENT INDEX
+    
+    # Excitement index selection, set average based on historical 
+    observe({
+      getGamesPro <- newGames()
+      exciteValue <- as.integer(mean(getGamesPro$excitementIndex))
+      updateSliderInput(session,"rfSlideExcite",value = exciteValue)
+    })
+    
+    # VENUE
+    
+    # Venue selection, set max of crowd slider to venue capacity
+    observe({
+      getVenue <- rfModelVenue()
+      if (input$rfVenue == 1) {
+        capacity <- as.integer(getVenue$venueCapacity)
+        updateSliderInput(session,"rfSlideCrowd",value = capacity, max = capacity)
+      } else {
+        updateSliderInput(session,"rfSlideCrowd",value = 50000, max = 100000)
+      }
+    })
+  })
 
 
   
@@ -625,8 +888,9 @@ function(input, output, session) {
   output$glmIntro <- renderUI({
     tags$div(HTML(paste(tags$strong("Purpose:"),"Predicting the outcome of a college football game, with a binary response of either 1",tags$i("- Win"),
                         ", or 0",tags$i("- Lose"),".",tags$br(),tags$br(),
-                        tags$strong("Model Type:"),"Logistic Regression",tags$br(),tags$br(),
-                        tags$strong("Model Description:"),"Description here...")
+                        tags$strong("Model Type:"),"Logistic Regression",tags$br(),
+                        tags$strong("Model Description:"),"Often the primary method used for predicting a non-continuous response variable with a binary classification. 
+                        Applies a binomial regression with a logistic function.")
     )
     )
   })
@@ -643,8 +907,8 @@ function(input, output, session) {
                         tags$i("model training"),"set undergoes k-fold cross validation for the model fit. The fitted model is selected automatically by the",
                         tags$code("caret"),"package based on resulting accuracy. Final accuracy is determined by applying the model to the",
                         tags$i("testing set"),".",tags$br(),
-                        tags$b(nTotal),"total records considered:",tags$b(nTotal-nFit),"records omitted containing",tags$code("NA"),",",tags$b(nTrain),
-                        "records in the training set, and",tags$b(nTest),"records in the testing set.")
+                        tags$b(nTotal),"total records:",tags$b(nTotal-nFit),"records omitted containing",tags$code("NA"),",",tags$b(nTrain),
+                        "records in the",tags$i("training set,"),"and",tags$b(nTest),"records in the",tags$i("testing set"),".")
     )
     )
   })
@@ -739,4 +1003,145 @@ function(input, output, session) {
   ########## RF ###########
   #########################
   
+  # Team logo image
+  output$teamLogoProRF <- renderUI({
+    tags$img(src=newTeams()$logos[1], width=90,style="display: block; margin-left: auto; margin-right: auto;")
+  })
+  
+  # Location status
+  output$locForRF <- renderUI({
+    if (input$rfLoc) {
+      tags$div(
+        HTML(paste(tags$h3(input$rfSelectLoc),tags$h4(tags$i("vs")))
+        )
+      )
+    } else{
+      tags$div(
+        HTML(paste(tags$h3("Anywhere"),tags$h4("vs"))
+        )
+      )
+    }
+  })
+  
+  # Opponent logo image
+  output$oppLogoProRF <- renderUI({
+    if (input$rfOppTalent) {
+      tags$img(src=rfOppTeam()$logos[1], width=90,style="display: block; margin-left: auto; margin-right: auto;")
+    } else{tags$h3("Anyone")}
+  })
+  
+  # Model introduction
+  output$rfIntro <- renderUI({
+    tags$div(HTML(paste(tags$strong("Purpose:"),"Predicting the outcome of a college football game, with a binary response of either 1",tags$i("- Win"),
+                        ", or 0",tags$i("- Lose"),".",tags$br(),tags$br(),
+                        tags$strong("Model Type:"),"Random Forests",tags$br(),
+                        tags$strong("Model Description:"),"Builds decision trees on bootstrapped training samples, then takes a random sample of predictors 
+                        to be used as split candidates. This helps prevent any strong predictors from consistently occuring in each tree.")
+    )
+    )
+  })
+  
+  # Model training process text
+  output$rfTrainProcess <- renderUI({
+    getModelData <- rfModelData()
+    nTotal <- nrow(newGames())
+    nFit <- nrow(rfModelData())
+    nTrain <- sum(getModelData$modelFitSet == "Train")
+    nTest <- sum(getModelData$modelFitSet == "Test")
+    
+    tags$div(HTML(paste("The custom filtered data set is split into a",tags$i("model training"),"set (70%) and a",tags$i("model testing"),"set (30%). The",
+                        tags$i("model training"),"set undergoes k-fold cross validation for the model fit. The fitted model is selected automatically by the",
+                        tags$code("caret"),"package based on resulting accuracy. Final accuracy is determined by applying the model to the",
+                        tags$i("testing set"),".",tags$br(),
+                        tags$b(nTotal),"total records:",tags$b(nTotal-nFit),"records omitted containing",tags$code("NA"),",",tags$b(nTrain),
+                        "records in the",tags$i("training set,"),"and",tags$b(nTest),"records in the",tags$i("testing set"),".")
+    )
+    )
+  })
+  
+  # TEAM SCORE
+  
+  # Team score selection, set average based on historical 
+  observe({
+    getGamesPro <- newGames()
+    avgPointValue <- as.integer(mean(getGamesPro$teamPointsScored))
+    updateSliderInput(session,"rfSlideScore",value = avgPointValue)
+  })
+  
+  # TALENT
+  
+  # Team talent slider, set average value from previous seasons
+  observe({
+    getTeamTalent <- rfModelTeamTalent()
+    avgTeamTalent <- as.integer(mean(getTeamTalent$teamTalent))
+    updateSliderInput(session,"rfSlideTTalent",value = avgTeamTalent)
+  })
+  # Opponent talent slider, set average value from previous seasons
+  observe({
+    getOppTalent <- rfModelOppTalent()
+    avgOppTalent <- as.integer(mean(getOppTalent$teamTalent))
+    updateSliderInput(session,"rfSlideOTalent",value = avgOppTalent)
+  })
+  
+  # EXCITEMENT INDEX
+  
+  # Excitement index selection, set average based on historical 
+  observe({
+    getGamesPro <- newGames()
+    exciteValue <- as.integer(mean(getGamesPro$excitementIndex))
+    updateSliderInput(session,"rfSlideExcite",value = exciteValue)
+  })
+  
+  # VENUE
+  
+  # Venue selection, set max of crowd slider to venue capacity
+  observe({
+    getVenue <- rfModelVenue()
+    if (input$rfVenue == 1) {
+      capacity <- as.integer(getVenue$venueCapacity)
+      updateSliderInput(session,"rfSlideCrowd",value = capacity, max = capacity)
+    } else {
+      updateSliderInput(session,"rfSlideCrowd",value = 50000, max = 100000)
+    }
+  })
+  
+  # THE MODEL
+  
+  output$tableRfModelData <- DT::renderDataTable({
+    getGamesPro <- newGames()
+    getTeams <- newTeams()
+    customPrintName <- paste0(getTeams$abbreviation," Model Fit Data Set")
+    customFileName <- paste0(getTeams$abbreviation,"modelFitDataSet")
+    DT::datatable(rfModelData(),extensions = 'Buttons',
+                  options = list(orderClasses = TRUE, pageLength = 5,dom = 'Blfrtip',
+                                 lengthMenu = list(c(5,10,25,50,100,-1),c('5','10','25','50','100','All')),
+                                 buttons = c(list(list(extend = 'copy', title= "")),
+                                             list(list(extend = 'print', title= customPrintName)),
+                                             list(list(extend = 'csv', filename= customFileName)),
+                                             list(list(extend = 'excel',filename= customFileName,title= "")),
+                                             list(list(extend = 'pdf', filename= customFileName,title= customPrintName,orientation='landscape',pageSize= 'LEGAL'))
+                                 )
+                  )
+    )
+  })
+  
+  output$tableRfUserData <- DT::renderDataTable({
+    getGamesPro <- newGames()
+    getTeams <- newTeams()
+    newRfUserData <- rfUserData()
+    newRfUserData <- newRfUserData %>% select(-won)
+    customPrintName <- paste0(getTeams$abbreviation," User Predictors Data Set")
+    customFileName <- paste0(getTeams$abbreviation,"userPredictorsDataSet")
+    DT::datatable(newRfUserData,extensions = 'Buttons',
+                  options = list(orderClasses = TRUE, pageLength = 5,dom = 'Blfrtip',
+                                 lengthMenu = list(c(5,10,25,50,100,-1),c('5','10','25','50','100','All')),
+                                 buttons = c(list(list(extend = 'copy', title= "")),
+                                             list(list(extend = 'print', title= customPrintName)),
+                                             list(list(extend = 'csv', filename= customFileName)),
+                                             list(list(extend = 'excel',filename= customFileName,title= "")),
+                                             list(list(extend = 'pdf', filename= customFileName,title= customPrintName,orientation='landscape',pageSize= 'LEGAL'))
+                                 )
+                  )
+    )
+  })
 }
