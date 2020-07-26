@@ -10,9 +10,18 @@ library(caret)
 library(e1071)
 library(randomForest)
 library(gbm)
+library(shinyjs)
+library(V8)
 
 # Call data generated from save function within the "CollegeFootballAPI.R" file
 load("collegeFootball.Rdata")
+
+# Utilize shinyjs package for javascript code to collapse boxes on command
+jscode <- "
+shinyjs.collapse = function(boxid) {
+$('#' + boxid).closest('.box').find('[data-widget=collapse]').click();
+}
+"
 
 function(input, output, session) {
 
@@ -105,7 +114,7 @@ function(input, output, session) {
   ##### MODELING
   #####
   
-  ########## GLM #########
+  ########## GLM ##########
   
   # TALENT
   
@@ -146,8 +155,6 @@ function(input, output, session) {
         mutate("locAway"=as.integer(ifelse(location=="Away",1,0))) %>%
         mutate("locNeutral"=as.integer(ifelse(location=="Neutral",1,0))) %>%
         select(-location)
-      #getGames$venueGrass <- as.factor(getGames$venueGrass)
-      #getGames$venueDome <- as.factor(getGames$venueDome)
       getGames$won <- as.factor(getGames$won)
       # Dynamic variable selection based on user input
       if(input$glmTeamScore) {getGames} else{getGames <- select(getGames,-teamPointsScored)}
@@ -206,59 +213,115 @@ function(input, output, session) {
   
   # MODEL FITTING AND USER PREDICTOR CREATION
   
-  observeEvent(input$genGLM,{
-      #glmModelData1 <- eventReactive(input$genGLM,{
-      # MODEL FIT
-      # reactiveValues()
-      # reactiveValues()
-      #  sugg <- eventReactive(input$coach, {
-      gamesTrain <- glmModelData()
-      userVenue <- glmModelVenue()
-      glmUserData <- glmUserData()
-      gamesTrain <- gamesTrain %>% filter(modelFitSet=="Train") %>%
-        select(-modelFitSet)
-      gamesTest <- glmModelData()
-      gamesTest <- gamesTest %>% filter(modelFitSet=="Test") %>%
-        select(-modelFitSet)
-      # 1. Use trainControl() function to control computations and set number of desired folds for cross validation
-      trctrl <- trainControl(method = "repeatedcv", number = 3, repeats = 3)
-      # 2. Set a seed for reproducible result
-      set.seed(3333)
-      # 3. Use train() function to determine a generalized linear regression model of best fit
-      readToColumn <- ncol(gamesTrain)
-      logReg_fit <- train(won ~ ., data = gamesTrain, method = "glm", family="binomial", trControl=trctrl, preProcess = c("center", "scale"), tuneLength = 10)
-      testPredGLM <- predict(logReg_fit, newdata = gamesTest)
-      print(logReg_fit)
-      print(testPredGLM)
-      conMatrixGLM <- confusionMatrix(testPredGLM,gamesTest$won)
-      print(conMatrixGLM)
-      
+  glmReValue <- reactiveValues()
 
-      
-      print(str(glmUserData))
-
-      userPredGLM <- predict(logReg_fit, newdata = glmUserData)
-      print(userPredGLM)
+  # GLM Create Button Actions
+  
+  glmCreateModel <- observeEvent(input$glmCreate,{
+    gamesTrain <- glmModelData()
+    userVenue <- glmModelVenue()
+    glmUserData <- glmUserData()
+    gamesTrain <- gamesTrain %>% filter(modelFitSet=="Train") %>%
+      select(-modelFitSet)
+    gamesTest <- glmModelData()
+    gamesTest <- gamesTest %>% filter(modelFitSet=="Test") %>%
+      select(-modelFitSet)
+    # Add the test and train data sets to the reactive value
+    glmReValue$train <- gamesTrain
+    glmReValue$test <- gamesTest
+    # 1. Use trainControl() function to control computations and set number of desired folds for cross validation
+    trctrl <- trainControl(method = "repeatedcv", number = 3, repeats = 3)
+    # 2. Set a seed for reproducible result
+    set.seed(3333)
+    # 3. Use train() function to determine a generalized linear regression model of best fit
+    logReg_fit <- train(won ~ ., data = gamesTrain, method = "glm", family="binomial", trControl=trctrl, preProcess = c("center", "scale"), tuneLength = 10)
+    # 4. Test newly created model against the test set and generate confusion matric for performance metrics
+    testPredGLM <- predict(logReg_fit, newdata = gamesTest)
+    conMatrixGLM <- confusionMatrix(testPredGLM,gamesTest$won)
+    userPredGLM <- predict(logReg_fit, newdata = glmUserData)
+    # Add the model and confusion matrix test accuracy figure to the reactive value
+    glmReValue$model <- logReg_fit
+    glmReValue$accuracy <- conMatrixGLM[[3]][[1]]
+    print("Model created and values stored.")
+    js$collapse("glmStep1")
+    js$collapse("glmStep2")
+    js$collapse("glmStep3")
   })
 
+  # GLM Predict Button Actions
   
-  observeEvent(input$coach1, {
+  glmMakePrediction <- observeEvent(input$glmPredict,{
+    userPredGLM <- predict(glmReValue$model, newdata = glmUserData())
+    print(userPredGLM)
+  })
+  
+  # GLM Reset Button Actions
+  
+  glmMakePrediction <- observeEvent(input$glmReset,{
+    js$collapse("glmStep1")
+    js$collapse("glmStep2")
+    js$collapse("glmStep3")
+    # Reset all inputs from Step 1
+    reset("glmTeamScore")
+    reset("glmTeamTalent")
+    reset("glmOppTalent")
+    reset("glmLoc")
+    reset("glmExcite")
+    reset("glmVenue")
+    reset("glmCrowd")
+    reset("glmSelectOpp")
+    reset("glmSelectLoc")
+    reset("glmSelectVenue")
+    # TEAM SCORE
     
-    hey <- reactive({
-      yo <- paste0("hey",input$coach)
-      return(yo)
+    # Team score selection, set average based on historical 
+    observe({
+      getGamesPro <- newGames()
+      avgPointValue <- as.integer(mean(getGamesPro$teamPointsScored))
+      updateSliderInput(session,"glmSlideScore",value = avgPointValue)
     })
     
-    heyJoe <- reactive({
-      yo <- paste0(input$coach," Joe",hey())
-      return(yo)
+    # TALENT
+    
+    # Team talent slider, set average value from previous seasons
+    observe({
+      getTeamTalent <- glmModelTeamTalent()
+      avgTeamTalent <- as.integer(mean(getTeamTalent$teamTalent))
+      updateSliderInput(session,"glmSlideTTalent",value = avgTeamTalent)
+    })
+    # Opponent talent slider, set average value from previous seasons
+    observe({
+      getOppTalent <- glmModelOppTalent()
+      avgOppTalent <- as.integer(mean(getOppTalent$teamTalent))
+      updateSliderInput(session,"glmSlideOTalent",value = avgOppTalent)
     })
     
-    print(heyJoe())
+    # EXCITEMENT INDEX
+    
+    # Excitement index selection, set average based on historical 
+    observe({
+      getGamesPro <- newGames()
+      exciteValue <- as.integer(mean(getGamesPro$excitementIndex))
+      updateSliderInput(session,"glmSlideExcite",value = exciteValue)
+    })
+    
+    # VENUE
+    
+    # Venue selection, set max of crowd slider to venue capacity
+    observe({
+      getVenue <- glmModelVenue()
+      if (input$glmVenue == 1) {
+        capacity <- as.integer(getVenue$venueCapacity)
+        updateSliderInput(session,"glmSlideCrowd",value = capacity, max = capacity)
+      } else {
+        updateSliderInput(session,"glmSlideCrowd",value = 50000, max = 100000)
+      }
+    })
+    
     
   })
   
-  ########## RF #########
+  ########## RF ##########
   
   #####
   ##### GAME STATS
@@ -443,14 +506,14 @@ function(input, output, session) {
   ### MODELING
   ###
   
-  ########## GLM #########
+  ########## GLM ##########
   
   # Team logo image
   output$teamLogoProGLM <- renderUI({
     tags$img(src=newTeams()$logos[1], width=100,style="display: block; margin-left: auto; margin-right: auto;")
   })
   
-  # Opponent logo image
+  # Location status
   output$locForGLM <- renderUI({
     if (input$glmLoc) {
         tags$div(
@@ -558,6 +621,6 @@ function(input, output, session) {
     )
   })
   
-  ########## RANDOM #########
+  ########## RF ##########
   
 }

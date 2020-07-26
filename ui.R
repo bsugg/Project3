@@ -3,11 +3,21 @@ library(ggplot2)
 library(DT)
 library(leaflet)
 library(RColorBrewer)
+library(shinyjs)
+library(V8)
 
 # Shinydashboard information here https://rstudio.github.io/shinydashboard/index.html
 # Icons sourced from https://fontawesome.com/icons?d=gallery&m=free
 
+# Call data generated from save function within the "CollegeFootballAPI.R" file
 load("collegeFootball.Rdata")
+
+# Utilize shinyjs package for javascript code to collapse boxes on command
+jscode <- "
+shinyjs.collapse = function(boxid) {
+$('#' + boxid).closest('.box').find('[data-widget=collapse]').click();
+}
+"
 
 dashboardPage(
 
@@ -68,6 +78,10 @@ dashboardPage(
   
   dashboardBody(
   
+    # Enable javascript for shinyjs to control collapse of boxes
+    useShinyjs(),
+    extendShinyjs(text = jscode),
+    
     tabItems(
       
       #####
@@ -186,7 +200,8 @@ dashboardPage(
               ), # end fluidRow
               fluidRow(
                 column(width = 4,
-                       box(title="Step 1: Select Model Predictors",status="primary",width = NULL,collapsible = TRUE,
+                       box(id="glmStep1",title="Step 1: Create Prediction Model",status="primary",width = NULL,collapsible = TRUE,
+                           "Select the predictors you would like to use in your model:",
                            checkboxInput("glmTeamScore", "Team Points Scored", TRUE),
                            checkboxInput("glmTeamTalent", "Team Talent Level", TRUE),
                            checkboxInput("glmOppTalent", "Opponent Talent Level", TRUE),
@@ -194,12 +209,12 @@ dashboardPage(
                            checkboxInput("glmExcite", "Game Excitement Level", TRUE),
                            checkboxInput("glmVenue", "Venue Details", TRUE),
                            checkboxInput("glmCrowd", "Crowd Size", TRUE),
-                           actionButton("genGLM", "Create"),
-                           actionButton("coach", "Coach")
+                           "Create a new prediction model:",br(),
+                           actionButton("glmCreate", "Create Model")
                        )
                 ), # end column
                 column(width = 4,
-                       box(title="Step 2: Adjust Model Predictors",status="primary",width = NULL,collapsible = TRUE,
+                       box(id="glmStep2",title="Step 2: Adjust Model Predictors",status="primary",width = NULL,collapsible = TRUE,collapsed=TRUE,
                            conditionalPanel(condition = "input.glmTeamScore == 1",
                                             sliderInput("glmSlideScore", "Team Points Scored",min=0, max=80,value=40)),
                            conditionalPanel(condition = "input.glmTeamTalent == 1",
@@ -221,7 +236,11 @@ dashboardPage(
                        
                 ), # end column
                 column(width = 4,
-                       box(title="Step 3: Generate Model",status="primary",width=NULL,collapsible = TRUE,)
+                       box(id="glmStep3",title="Step 3: Generate Prediction",status="primary",width=NULL,collapsible = TRUE,collapsed=TRUE,
+                           "Make a prediction from the last generated model:",br(),
+                           actionButton("glmPredict", "Predict"),br(),br(),
+                           "Return to Step 1 and create a new model:",br(),
+                           actionButton("glmReset", "Reset"))
                 ) # end column
               ), # end fluidRow
               fluidRow(
