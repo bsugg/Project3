@@ -48,7 +48,7 @@ dashboardPage(
       menuItem("Unsupervised Learning", tabName = "unsupervised", icon = icon("chalkboard-teacher")),
       menuItem("Modeling", tabName = "model", icon = icon("code-branch"),
                 menuSubItem("Generalized Linear Model", tabName = "modelGLM"),
-                menuSubItem("Model 2", tabName = "model2")
+                menuSubItem("Ensemble Model", tabName = "modelRF")
                ),
       menuItem("Data", tabName = "data", icon = icon("th")),
       menuItem("Source API", icon = icon("file-code-o"),href = "https://collegefootballdata.com/"),
@@ -260,7 +260,93 @@ dashboardPage(
                            div(style = 'overflow-x: scroll', DT::dataTableOutput("tableGlmUserData")),width = NULL)
                 ) # end column
               ) # end fluidRow
-      ) # END OF GAMES
+      ), # END OF TAB Model GM
+      
+      # MODEL - RF
+      tabItem(tabName = "modelRF",
+              fluidRow(
+                column(width = 3,
+                       box(title="Ensemble Model",status="primary",width = NULL,height=283,
+                           uiOutput("rfIntro"))
+                ), # end column
+                column(width = 6,
+                       box(title="Team",status="primary",width = 4,height=160,
+                           uiOutput("teamLogoProRF")
+                       ),
+                       box(id="rfBoxLoc",title="Location",status="primary",width = 4,height=160,align = "center",collapsible = TRUE,collapsed = TRUE,
+                           uiOutput("locForRF")
+                       ),
+                       box(id="rfBoxOpp",title="Opponent",status="primary",width = 4,height=160,align = "center",collapsible = TRUE,collapsed = TRUE,
+                           uiOutput("oppLogoProRF")
+                       ),
+                       valueBoxOutput("rfPredictBox"),
+                       valueBoxOutput("rfAccBox"),
+                       valueBoxOutput("rfNumVar")
+                ), # end column
+                column(width = 3,
+                       box(title="Model Training Process",status="primary",width = NULL,height=283,
+                           uiOutput("rfTrainProcess"))
+                ), # end column
+              ), # end fluidRow
+              fluidRow(
+                column(width = 4,
+                       box(id="rfStep1",title="Step 1: Create Prediction Model",status="primary",width = NULL,collapsible = TRUE,
+                           "Select the predictors you would like to use in your model:",
+                           checkboxInput("rfTeamScore", "Team Points Scored", TRUE),
+                           checkboxInput("rfTeamTalent", "Team Talent Level", TRUE),
+                           checkboxInput("rfOppTalent", "Opponent Talent Level", TRUE),
+                           checkboxInput("rfLoc", "Game Location", TRUE),
+                           checkboxInput("rfExcite", "Game Excitement Level", TRUE),
+                           checkboxInput("rfVenue", "Venue Details", TRUE),
+                           checkboxInput("rfCrowd", "Crowd Size", TRUE),
+                           "Create a new prediction model:",br(),
+                           actionButton("rfCreate", "Create Model")
+                       )
+                ), # end column
+                column(width = 4,
+                       box(id="rfStep2",title="Step 2: Adjust Model Predictors",status="primary",width = NULL,collapsible = TRUE,collapsed=TRUE,
+                           conditionalPanel(condition = "input.rfTeamScore == 1",
+                                            sliderInput("rfSlideScore", "Team Points Scored",min=0, max=80,value=40)),
+                           conditionalPanel(condition = "input.rfTeamTalent == 1",
+                                            sliderInput("rfSlideTTalent", "Team Talent Level",min=0, max=1000,value=500)),
+                           conditionalPanel(condition = "input.rfOppTalent == 1",
+                                            selectizeInput("rfSelectOpp", "Opponent",
+                                                           selected = "NC State", choices = levels(as.factor(teams$school))),
+                                            sliderInput("rfSlideOTalent", "Opponent Talent Level",min=0, max=1000,value=500)),
+                           conditionalPanel(condition = "input.rfLoc == 1",
+                                            selectizeInput("rfSelectLoc", "Game Location", selected = "Home", choices = c("Home","Away","Neutral"))),
+                           conditionalPanel(condition = "input.rfExcite == 1",
+                                            sliderInput("rfSlideExcite", "Game Excitement Level",min=0, max=10,value=5)),
+                           conditionalPanel(condition = "input.rfVenue == 1",
+                                            selectizeInput("rfSelectVenue", "Venue",
+                                                           selected = "Mercedes-Benz Stadium - Atlanta, GA", choices = levels(as.factor(venues$venueUniqueName)))),
+                           conditionalPanel(condition = "input.rfCrowd == 1",
+                                            sliderInput("rfSlideCrowd", "Crowd Size",min=0, max=100000,value=50000))
+                       )
+                       
+                ), # end column
+                column(width = 4,
+                       box(id="rfStep3",title="Step 3: Generate Prediction",status="primary",width=NULL,collapsible = TRUE,collapsed=TRUE,
+                           "Make a prediction from the selected predictors and the last generated model:",br(),
+                           actionButton("rfPredict", "Predict")),
+                       box(id="rfReset",title="Reset",status="primary",width=NULL,collapsible = TRUE,collapsed=TRUE,
+                           "Return to Step 1 and create a new model:",br(),
+                           actionButton("rfReset", "Reset"))
+                ) # end column
+              ), # end fluidRow
+              fluidRow(
+                column(width = 12,
+                       box(title="Custom Data Set for Model Fit",status="primary",
+                           div(style = 'overflow-x: scroll', DT::dataTableOutput("tableRfModelData")),width = NULL)
+                ) # end column
+              ), # end fluidRow
+              fluidRow(
+                column(width = 12,
+                       box(title="User Data Set for Prediction",status="primary",
+                           div(style = 'overflow-x: scroll', DT::dataTableOutput("tableRfUserData")),width = NULL)
+                ) # end column
+              ) # end fluidRow
+      ) # END OF TAB Model RF
       
     ) # END OF tabItems(
     

@@ -111,10 +111,20 @@ function(input, output, session) {
   })
   
   #####
+  ##### GAME STATS
+  #####
+  
+  gameStatsNew <- reactive({
+    gameStats <- gameStats %>% filter(school == input$team)
+  })
+  
+  #####
   ##### MODELING
   #####
   
+  #########################
   ########## GLM ##########
+  #########################
   
   # TALENT
   
@@ -390,15 +400,11 @@ function(input, output, session) {
     
   })
   
-  ########## RF ##########
+  #########################
+  ########## RF ###########
+  #########################
   
-  #####
-  ##### GAME STATS
-  #####
-  
-  gameStatsNew <- reactive({
-    gameStats <- gameStats %>% filter(school == input$team)
-  })
+
 
   
 ###################### OUTPUT ################################################
@@ -584,7 +590,9 @@ function(input, output, session) {
   ### MODELING
   ###
   
+  #########################
   ########## GLM ##########
+  #########################
   
   # Team logo image
   output$teamLogoProGLM <- renderUI({
@@ -727,6 +735,8 @@ function(input, output, session) {
     )
   })
   
-  ########## RF ##########
+  #########################
+  ########## RF ###########
+  #########################
   
 }
