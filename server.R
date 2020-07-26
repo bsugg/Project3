@@ -5,6 +5,11 @@ library(DT)
 library(leaflet)
 library(ragtop)
 library(knitr)
+library(class)
+library(caret)
+library(e1071)
+library(randomForest)
+library(gbm)
 
 # Call data generated from save function within the "CollegeFootballAPI.R" file
 load("collegeFootball.Rdata")
@@ -127,41 +132,117 @@ function(input, output, session) {
   
   # MODEL DATA SET
   
-  glmModelData <- eventReactive(input$genGLM, {
-    getGames <- newGames()
-    getGames <- getGames %>% select(won,teamPointsScored,teamTalent,oppTalent,location,excitementIndex,
-                                          venueElevation,venueGrass,venueDome,venueLat,venueLong,attendance)
-    # Transform
-    getGames <- getGames %>% mutate("locHome"=as.integer(ifelse(location=="Home",1,0))) %>%
-      mutate("locAway"=as.integer(ifelse(location=="Away",1,0))) %>%
-      mutate("locNeutral"=as.integer(ifelse(location=="Neutral",1,0))) %>%
-      select(-location)
-    getGames$venueGrass <- as.integer(getGames$venueGrass)
-    getGames$venueDome <- as.integer(getGames$venueDome)
-    # Dynamic variable selection based on user input
-    if(input$glmTeamScore) {getGames} else{getGames <- select(getGames,-teamPointsScored)}
-    if(input$glmTeamTalent) {getGames} else{getGames <- select(getGames,-teamTalent)}
-    if(input$glmOppTalent) {getGames} else{getGames <- select(getGames,-oppTalent)}
-    if(input$glmLoc) {getGames} else{getGames <- getGames %>% select(-starts_with("loc"))}
-    if(input$glmExcite) {getGames} else{getGames <- select(getGames,-excitementIndex)}
-    if(input$glmVenue) {getGames} else{getGames <- getGames %>% select(-starts_with("venue"))}
-    if(input$glmCrowd) {getGames} else{getGames <- select(getGames,-attendance)}
-    # Remove records with NA values
-    getGames <- na.omit(getGames)
-    print(length(getGames$omit))
-    ## Data slicing for model fit later on
-    # Set seed for reproducible results
-    set.seed(1)
-    # Create the training and test sets
-    train <- sample(1:nrow(getGames),size=nrow(getGames)*0.7)
-    test <- dplyr::setdiff(1:nrow(getGames),train)
-    gamesTrain <- getGames[train, ]
-    gamesTrain <- gamesTrain %>% mutate("modelFitSet"="Train")
-    gamesTest <- getGames[test, ]
-    gamesTest <- gamesTest %>% mutate("modelFitSet"="Test")
-    # Merge back together, with new modelFitSet column
-    getGames <- bind_rows(gamesTrain,gamesTest)
-    return(getGames)
+  glmModelData <- reactive({
+      getGames <- newGames()
+      getGames <- getGames %>% select(won,teamPointsScored,teamTalent,oppTalent,location,excitementIndex,
+                                      venueElevation,venueGrass,venueDome,venueLat,venueLong,attendance)
+      # Transform
+      getGames <- getGames %>% mutate("locHome"=as.integer(ifelse(location=="Home",1,0))) %>%
+        mutate("locAway"=as.integer(ifelse(location=="Away",1,0))) %>%
+        mutate("locNeutral"=as.integer(ifelse(location=="Neutral",1,0))) %>%
+        select(-location)
+      #getGames$venueGrass <- as.factor(getGames$venueGrass)
+      #getGames$venueDome <- as.factor(getGames$venueDome)
+      getGames$won <- as.factor(getGames$won)
+      # Dynamic variable selection based on user input
+      if(input$glmTeamScore) {getGames} else{getGames <- select(getGames,-teamPointsScored)}
+      if(input$glmTeamTalent) {getGames} else{getGames <- select(getGames,-teamTalent)}
+      if(input$glmOppTalent) {getGames} else{getGames <- select(getGames,-oppTalent)}
+      if(input$glmLoc) {getGames} else{getGames <- getGames %>% select(-starts_with("loc"))}
+      if(input$glmExcite) {getGames} else{getGames <- select(getGames,-excitementIndex)}
+      if(input$glmVenue) {getGames} else{getGames <- getGames %>% select(-starts_with("venue"))}
+      if(input$glmCrowd) {getGames} else{getGames <- select(getGames,-attendance)}
+      # Remove records with NA values
+      getGames <- as.data.frame(na.omit(getGames))
+      print(str(getGames))
+      ## Data slicing for model fit later on
+      # Set seed for reproducible results
+      set.seed(1)
+      # Create the training and test sets
+      train <- sample(1:nrow(getGames),size=nrow(getGames)*0.7)
+      test <- dplyr::setdiff(1:nrow(getGames),train)
+      gamesTrain <- getGames[train, ]
+      gamesTrain <- gamesTrain %>% mutate("modelFitSet"="Train")
+      gamesTest <- getGames[test, ]
+      gamesTest <- gamesTest %>% mutate("modelFitSet"="Test")
+      # Merge back together, with new modelFitSet column
+      getGames <- bind_rows(gamesTrain,gamesTest)
+    })
+  
+  # MODEL FITTING AND USER PREDICTOR CREATION
+  
+  observeEvent(input$genGLM,{
+      #glmModelData1 <- eventReactive(input$genGLM,{
+      # MODEL FIT
+      # reactiveValues()
+      # reactiveValues()
+      #  sugg <- eventReactive(input$coach, {
+      gamesTrain <- glmModelData()
+      userVenue <- glmModelVenue()
+      gamesTrain <- gamesTrain %>% filter(modelFitSet=="Train") %>%
+        select(-modelFitSet)
+      gamesTest <- glmModelData()
+      gamesTest <- gamesTest %>% filter(modelFitSet=="Test") %>%
+        select(-modelFitSet)
+      # 1. Use trainControl() function to control computations and set number of desired folds for cross validation
+      trctrl <- trainControl(method = "repeatedcv", number = 3, repeats = 3)
+      # 2. Set a seed for reproducible result
+      set.seed(3333)
+      # 3. Use train() function to determine a generalized linear regression model of best fit
+      readToColumn <- ncol(gamesTrain)
+      logReg_fit <- train(won ~ ., data = gamesTrain, method = "glm", family="binomial", trControl=trctrl, preProcess = c("center", "scale"), tuneLength = 10)
+      testPredGLM <- predict(logReg_fit, newdata = gamesTest)
+      print(logReg_fit)
+      print(testPredGLM)
+      conMatrixGLM <- confusionMatrix(testPredGLM,gamesTest$won)
+      print(conMatrixGLM)
+      
+      # CREATE USER PREDICTORS DATA SET
+      glmUserData <- data.frame("won"=factor("0",levels = c("0", "1")),"teamPointsScored"=as.numeric(0),
+                      "teamTalent"=as.numeric(0),"oppTalent"=as.numeric(0),"excitementIndex"=as.numeric(0),
+                      "venueElevation"=as.numeric(0),"venueGrass"=as.logical(FALSE),"venueDome"=as.logical(FALSE),
+                      "venueLat"=as.numeric(0),"venueLong"=as.numeric(0),"attendance"=as.integer(0),
+                      "locHome"=as.integer(0),"locAway"=as.integer(0),"locNeutral"=as.integer(0))
+      # UPDATE with USER PREDICOTRS
+      if(input$glmTeamScore) {glmUserData$teamPointsScored <- input$glmSlideScore} else{glmUserData <- select(glmUserData,-teamPointsScored)}
+      if(input$glmTeamTalent) {glmUserData$teamTalent <- as.numeric(input$glmSlideTTalent)} else{glmUserData <- select(glmUserData,-teamTalent)}
+      if(input$glmOppTalent) {glmUserData$oppTalent <- as.numeric(input$glmSlideOTalent)} else{glmUserData <- select(glmUserData,-oppTalent)}
+      if(input$glmLoc) {
+        if(input$glmSelectLoc=="Home") {glmUserData$locHome <- as.integer(1)
+        } else { if(input$glmSelectLoc=="Away") {glmUserData$locAway <- as.integer(1)
+        } else {glmUserData$locNeutral <- as.integer(1)}}
+      } else{glmUserData <- glmUserData %>% select(-starts_with("loc"))}
+      if(input$glmExcite) {glmUserData$excitementIndex <- as.numeric(input$glmSlideExcite)} else{glmUserData <- select(glmUserData,-excitementIndex)}
+      if(input$glmVenue) {
+        glmUserData$venueElevation <- userVenue$venueElevation
+        glmUserData$venueGrass <- userVenue$venueGrass
+        glmUserData$venueDome <- userVenue$venueDome
+        glmUserData$venueLat <- userVenue$venueLat
+        glmUserData$venueLong <- userVenue$venueLong
+        } else{glmUserData <- glmUserData %>% select(-starts_with("venue"))}
+      if(input$glmCrowd) {glmUserData$attendance <- input$glmSlideCrowd} else{glmUserData <- select(glmUserData,-attendance)}
+      
+      print(str(glmUserData))
+
+      userPredGLM <- predict(logReg_fit, newdata = glmUserData)
+      print(userPredGLM)
+  })
+
+  
+  observeEvent(input$coach1, {
+    
+    hey <- reactive({
+      yo <- paste0("hey",input$coach)
+      return(yo)
+    })
+    
+    heyJoe <- reactive({
+      yo <- paste0(input$coach," Joe",hey())
+      return(yo)
+    })
+    
+    print(heyJoe())
+    
   })
   
   ########## RF #########
@@ -398,10 +479,6 @@ function(input, output, session) {
   })
   
   # THE MODEL
-  
-  #output$tableGlmModelData <- DT::renderDataTable({
-  #  DT::datatable(glmModelData(),options = list(orderClasses = TRUE,pageLength = 5))
-  #})
   
   output$tableGlmModelData <- DT::renderDataTable({
     getGamesPro <- newGames()

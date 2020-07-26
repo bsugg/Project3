@@ -174,7 +174,8 @@ dashboardPage(
                            checkboxInput("glmExcite", "Game Excitement Level", TRUE),
                            checkboxInput("glmVenue", "Venue Details", TRUE),
                            checkboxInput("glmCrowd", "Crowd Size", TRUE),
-                           actionButton("genGLM", "Create")
+                           actionButton("genGLM", "Create"),
+                           actionButton("coach", "Coach")
                            )
                 ), # end column
                 column(width = 4,
