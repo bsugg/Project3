@@ -186,19 +186,24 @@ dashboardPage(
       # GAMES
       tabItem(tabName = "gameSum",
               fluidRow(
-                column(width = 4,
+                column(width = 5,
                        box(title="Game Summary",status = "primary",width = NULL,
                            "Basic summary statistics and visualizations from the games data set are provided."),
                        box(title="Numeric Summaries",status = "primary",width = NULL,
                            tabsetPanel(type = "tabs",
-                                       tabPanel("1", plotlyOutput("gsName"))
+                                       tabPanel("Summary", uiOutput("gsSumStats")),
+                                       tabPanel("Location", uiOutput("gsLocFreq")),
+                                       tabPanel("Conference", uiOutput("gsOppCFreq")),
+                                       tabPanel("Game Day", uiOutput("gsDayFreq")),
+                                       tabPanel("State", uiOutput("gsStateFreq"))
                            ))
                 ), # end column
-                column(width = 8,
+                column(width = 7,
                        box(title="Graphical Summaries",status = "primary",width = NULL,
                            tabsetPanel(type = "tabs",
                                        tabPanel("Box Plot", plotlyOutput("gsBoxPoints")),
-                                       tabPanel("Histogram", plotlyOutput("gsHistPoints"))
+                                       tabPanel("Histogram", sliderInput("histSlide", "Number of Bins",min=10, max=30,value=20),
+                                       plotlyOutput("gsHistPoints"))
                            ))
                 ) # end column
               ), # end fluidRow

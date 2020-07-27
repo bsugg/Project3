@@ -18,6 +18,7 @@ library(wordcloud2)
 library(tm)
 library(data.table)
 library(autoplotly)
+library(kableExtra)
 
 # Call data generated from save function within the "CollegeFootballAPI.R" file
 load("collegeFootball.RData")
@@ -985,6 +986,54 @@ function(input, output, session) {
   ### GAME SUMMARY
   ###
   
+  # Freq table
+  output$gsLocFreq <- renderUI({
+    getGames <- newGames()
+    getGames$outcome <- factor(ifelse(getGames$outcome=="Won","x.Won","y.Loss"))
+    freq <- table(getGames$location,getGames$outcome)
+    y <- kable(freq,caption="Location vs Outcome") %>% kable_styling(bootstrap_options = c("striped", "hover"))
+    tags$div(HTML(y))
+  })
+  
+  # Freq table
+  output$gsOppCFreq <- renderUI({
+    getGames <- newGames()
+    getGames$outcome <- factor(ifelse(getGames$outcome=="Won","x.Won","y.Loss"))
+    freq <- table(getGames$oppConference,getGames$outcome)
+    y <- kable(freq,caption="Opponent Conference vs Outcome") %>% kable_styling(bootstrap_options = c("striped", "hover"))
+    tags$div(HTML(y))
+  })
+  
+  # Freq table
+  output$gsDayFreq <- renderUI({
+    getGames <- newGames()
+    getGames$outcome <- factor(ifelse(getGames$outcome=="Won","x.Won","y.Loss"))
+    freq <- table(getGames$kickoffDay,getGames$outcome)
+    y <- kable(freq,caption="Game Day vs Outcome") %>% kable_styling(bootstrap_options = c("striped", "hover"))
+    tags$div(HTML(y))
+  })
+  
+  # Freq table
+  output$gsStateFreq <- renderUI({
+    getGames <- newGames()
+    getGames$outcome <- factor(ifelse(getGames$outcome=="Won","x.Won","y.Loss"))
+    freq <- table(getGames$venueState,getGames$outcome)
+    y <- kable(freq,caption="Venue State vs Outcome") %>% kable_styling(bootstrap_options = c("striped", "hover"))
+    tags$div(HTML(y))
+  })
+  
+  # Summary Table
+  output$gsSumStats <- renderUI({
+  getGames <- newGames()
+  getGames <- getGames %>% select(teamPointsScored,oppPointsScored,oppTalent,attendance) %>% na.omit(getGames)
+  y <- knitr::kable(cbind("Team Points"=round(summary(getGames$teamPointsScored),1),
+                          "Opponent Points"=round(summary(getGames$oppPointsScored),1),
+                          "Opponent Talent"=round(summary(getGames$oppTalent),1),
+                          "Attendance"=round(summary(getGames$attendance),1)),
+                    caption=paste("Summary Stats")) %>% kable_styling(bootstrap_options = c("striped", "hover"))
+  tags$div(HTML(y))
+  })
+    
   # Box plot
   output$gsBoxPoints <- renderPlotly({
     getGames <- newGames()
@@ -997,19 +1046,17 @@ function(input, output, session) {
     y
   })
   
-  
-  
   # Histogram
   output$gsHistPoints <- renderPlotly({
     getGames <- newGames()
     histPoints <- ggplot(data=getGames,aes(x=teamPointsScored,y=..density..)) +
       geom_density(adjust=0.4,size=3,color="red") +
-      geom_histogram(bins=30) + labs(x="Team Points Scored",y="Game Count",title="Histogram of Team Points Scored")
+      geom_histogram(bins=input$histSlide) + labs(x="Team Points Scored",y="Game Count",title="Histogram of Team Points Scored")
     y <- ggplotly(histPoints)
     y
   })
   
-  
+  # Data table
   output$tableGames <- DT::renderDataTable({
     getGamesPro <- newGames()
     getTeams <- newTeams()
@@ -1053,7 +1100,6 @@ function(input, output, session) {
     )
   })
   
-
   # Create plots
   output$unsuperPCA <- renderPlotly({
     unsuper <- unsuperGames()
