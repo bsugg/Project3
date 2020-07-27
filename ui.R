@@ -50,7 +50,10 @@ dashboardPage(
                 menuSubItem("Ensemble Model", tabName = "modelRF")
                ),
       menuItem("Data", tabName = "data", icon = icon("th")),
-      menuItem("Source API", icon = icon("file-code-o"),href = "https://collegefootballdata.com/"),
+      menuItem("Source API", icon = icon("file-code-o"),
+               menuSubItem("Main Page", href = "https://collegefootballdata.com/"),
+               menuSubItem("Glossary",href = "https://collegefootballdata.com/Glossary")
+              ),
       uiOutput("teamLogo"),
       selectizeInput("team", "Team",
                   selected = "North Carolina", choices = levels(as.factor(teams$school))
@@ -89,8 +92,8 @@ dashboardPage(
       #####
       tabItem(tabName = "info",
               fluidRow(
-                column(width=12,
-                  box(title = "ST558 - Project 3", status = "primary",width=NULL,
+                column(width=6,
+                  box(title = "Information", status = "primary",width=NULL,
                     "Brian Sugg", br(),
                     "July 27, 2020", br(),
                     br(),
@@ -98,8 +101,25 @@ dashboardPage(
                     br(),
                     "Other dynamic text here."
                   )
-                )
-              )
+                ), # END COLUMN
+                column(width=6,
+                       box(title = "Word Cloud of Teams by Wins",footer="Dynamic with Season and Game Type Selection", status = "primary",width=NULL,
+                           wordcloud2Output("infoCloudTeams")
+                       ),
+                ), # END COLUMN
+              ), # END FLUID ROW
+              fluidRow(
+                column(width=6,
+                       box(title = "Abilities", status = "primary",width=NULL,
+                           "Will put some notes here..."
+                       ),
+                ), # END COLUMN
+                column(width=6,
+                       box(title = "Things to Look For...", status = "primary",width=NULL,
+                           "Pending..."
+                       ),
+                ) # END COLUMN
+              ) # END FLUID ROW
       ),
       
       #####
@@ -170,6 +190,19 @@ dashboardPage(
                  ) # end column
                ) # end fluidRow
              ), # END OF GAMES
+      
+      #####
+      ##### UNSUPERVISED
+      #####
+      
+      tabItem(tabName = "unsupervised",
+              fluidRow(
+                column(width = 12,
+                       box(title="Unsupervised Learning",status = "primary",width = NULL,
+                           "Will go here...")
+                ) # end column
+              ) # end fluidRow
+      ), # END OF UNSUPERVISED
       
       #####
       ##### MODELING

@@ -14,6 +14,9 @@ library(shinyjs)
 library(V8)
 library(mathjaxr)
 library(plotly)
+library(wordcloud2)
+library(tm)
+library(data.table)
 
 # Call data generated from save function within the "CollegeFootballAPI.R" file
 load("collegeFootball.Rdata")
@@ -94,6 +97,65 @@ function(input, output, session) {
                                              ifelse(teamConference==oppConference,"Conference","NonConference"))
                        ) %>%
                        rename("excitementIndex"=excitement_index)
+    games <- arrange(games,kickoffDate)
+    # Join with talent data sets
+    games <- left_join(games,talentTeam,by=c("season","team"))
+    games <- left_join(games,talentOpp,by=c("season","opponent"))
+    # Join with venues data set to enrich with location details
+    gamesVenuesJoin <- left_join(games,venues,by="venueId")
+    gamesVenuesJoin <- gamesVenuesJoin %>% mutate(venueCityState=ifelse(!is.na(venueState),paste0(venueCity,", ",venueState),paste0(venueCity)))
+    
+    # Filter data based on manual selections of season type and schedule from user
+    if (input$selectSeasonType!="All") {
+      gamesVenuesJoin <- filter(gamesVenuesJoin,seasonType == input$selectSeasonType)
+    } else {gamesVenuesJoin}
+    if (input$selectSchedule!="All") {
+      gamesVenuesJoin <- filter(gamesVenuesJoin,schedule == input$selectSchedule)
+    } else {gamesVenuesJoin}
+  })
+  
+  # Create a joined set with 2 records per game played ... 1 as team and 1 as opponent
+  allGamesDouble <- reactive({
+    # Filter on user selected team and parse "games" data set for home and away
+    allHome <- games %>%
+      filter(season >= input$sliderSeason[1]) %>%
+      filter(season <= input$sliderSeason[2]) %>%
+      mutate(home=1) %>%
+      mutate(away=0) %>%
+      mutate(teamConference=as.character(ifelse(!is.na(home_conference),home_conference,"Other"))) %>%
+      mutate(teamPointsScored=home_points) %>%
+      mutate(won=as.integer(ifelse(home_points>away_points,1,0))) %>%
+      mutate(loss=as.integer(ifelse(home_points<away_points,1,0))) %>%
+      mutate(tie=as.integer(ifelse(home_points==away_points,1,0))) %>%
+      mutate(team=home_team) %>%
+      mutate(opponent=away_team) %>%
+      mutate(oppConference=as.character(ifelse(!is.na(away_conference),away_conference,"Other"))) %>%
+      mutate(oppPointsScored=away_points)
+    allAway <- games %>% 
+      filter(season >= input$sliderSeason[1]) %>%
+      filter(season <= input$sliderSeason[2]) %>%
+      mutate(home=0) %>%
+      mutate(away=1) %>%
+      mutate(teamConference=as.character(ifelse(!is.na(away_conference),away_conference,"Other"))) %>%
+      mutate(teamPointsScored=away_points) %>%
+      mutate(won=as.integer(ifelse(away_points>home_points,1,0))) %>%
+      mutate(loss=as.integer(ifelse(away_points<home_points,1,0))) %>%
+      mutate(tie=as.integer(ifelse(home_points==away_points,1,0))) %>%
+      mutate(team=away_team) %>%
+      mutate(opponent=home_team) %>%
+      mutate(oppConference=as.character(ifelse(!is.na(home_conference),home_conference,"Other"))) %>%
+      mutate(oppPointsScored=home_points)
+    # Merge the home and away sets into ONE games data set
+    games <- bind_rows(allHome,allAway)
+    # Add a few more attributes and sort by date
+    games <- games %>% mutate(outcome=as.factor(ifelse(won==1,"Won",ifelse(loss==1,"Loss","Tie")))) %>%
+      mutate(score=paste0(teamPointsScored,"-",oppPointsScored)) %>%
+      mutate(margin=teamPointsScored-oppPointsScored) %>%
+      mutate(location=ifelse(neutral_site,"Neutral",ifelse(home==1,"Home","Away"))) %>%
+      mutate(schedule=ifelse(teamConference=="Other" & oppConference=="Other",NA,
+                             ifelse(teamConference==oppConference,"Conference","NonConference"))
+      ) %>%
+      rename("excitementIndex"=excitement_index)
     games <- arrange(games,kickoffDate)
     # Join with talent data sets
     games <- left_join(games,talentTeam,by=c("season","team"))
@@ -701,6 +763,24 @@ function(input, output, session) {
       reset("selectSchedule")
     } else{}
   })
+  
+  #####
+  ##### INFORMATION
+  #####
+  
+  # WORD CLOUDS
+  
+  # Word cloud of wins by teams
+  output$infoCloudTeams <- renderWordcloud2({
+    withProgress(message = 'Generating word cloud...', value = 0,{
+    getGamesDouble <- allGamesDouble()
+    getGamesDouble <- getGamesDouble %>% filter(won==1) %>% select(team,won,outcome)
+    freqTab <- as.data.frame(table(getGamesDouble$outcome,getGamesDouble$team))
+    freqTab <- tibble::rownames_to_column(freqTab) %>% filter(Var1=="Won") %>% select(Var2,Freq) %>% rename("word"=Var2,"freq"=Freq) %>% dplyr::arrange(desc(freq))
+    incProgress(1/1, detail = "Generating word cloud...")
+    wordcloud2(freqTab,size=.2,color="random-dark")
+    }) # end progress bar
+    })
   
   #####
   ##### DATA EXPLORATION
