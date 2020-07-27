@@ -6,6 +6,8 @@ library(RColorBrewer)
 library(shinyjs)
 library(V8)
 library(mathjaxr)
+library(wordcloud2)
+library(plotly)
 
 # Shinydashboard information here https://rstudio.github.io/shinydashboard/index.html
 # Icons sourced from https://fontawesome.com/icons?d=gallery&m=free
@@ -21,7 +23,7 @@ $('#' + boxid).closest('.box').find('[data-widget=collapse]').click();
 "
 
 dashboardPage(
-
+  
   #
   ##
   ### HEADER
@@ -41,27 +43,27 @@ dashboardPage(
     sidebarMenu(
       menuItem("Information", tabName = "info", icon = icon("info")),
       menuItem("Data Exploration", tabName = "explore", icon = icon("bar-chart-o"),
-                menuSubItem("Team Summary", tabName = "teamSum"),
-                menuSubItem("Game Summary", tabName = "gameSum")
-               ),
+               menuSubItem("Team Summary", tabName = "teamSum"),
+               menuSubItem("Game Summary", tabName = "gameSum")
+      ),
       menuItem("Unsupervised Learning", tabName = "unsupervised", icon = icon("chalkboard-teacher")),
       menuItem("Modeling", tabName = "model", icon = icon("code-branch"),
-                menuSubItem("Generalized Linear Model", tabName = "modelGLM"),
-                menuSubItem("Ensemble Model", tabName = "modelRF")
-               ),
+               menuSubItem("Generalized Linear Model", tabName = "modelGLM"),
+               menuSubItem("Ensemble Model", tabName = "modelRF")
+      ),
       menuItem("Data", tabName = "data", icon = icon("th")),
       menuItem("Source API", icon = icon("file-code-o"),
                menuSubItem("Main Page", href = "https://collegefootballdata.com/"),
                menuSubItem("Glossary",href = "https://collegefootballdata.com/Glossary")
-              ),
+      ),
       uiOutput("teamLogo"),
       selectizeInput("team", "Team",
-                  selected = "North Carolina", choices = levels(as.factor(teams$school))
+                     selected = "North Carolina", choices = levels(as.factor(teams$school))
       ),
       sliderInput("sliderSeason", "Season",min=2012, max=2019,value=c(2012,2019),step=1,sep=""
-                  ),
+      ),
       radioButtons("radioGameSelect","Game Type Selection",choiceNames=list("Auto","Manual"),choiceValues=list("auto","manual")
-                   ),
+      ),
       conditionalPanel(condition = "input.radioGameSelect == 'manual'",style = "color:red;",
                        selectizeInput("selectSeasonType", "Season Type",
                                       selected = "All", choices = c("All","Regular","Postseason")
@@ -80,7 +82,7 @@ dashboardPage(
   #
   
   dashboardBody(
-  
+    
     # Enable javascript for shinyjs to control collapse of boxes
     useShinyjs(),
     extendShinyjs(text = jscode),
@@ -93,14 +95,14 @@ dashboardPage(
       tabItem(tabName = "info",
               fluidRow(
                 column(width=6,
-                  box(title = "Information", status = "primary",width=NULL,
-                    "Brian Sugg", br(),
-                    "July 27, 2020", br(),
-                    br(),
-                    "Describes the data and abilities of the app.", br(),
-                    br(),
-                    "Other dynamic text here."
-                  )
+                       box(title = "Information", status = "primary",width=NULL,
+                           "Brian Sugg", br(),
+                           "July 27, 2020", br(),
+                           br(),
+                           "Describes the data and abilities of the app.", br(),
+                           br(),
+                           "Other dynamic text here."
+                       )
                 ), # END COLUMN
                 column(width=6,
                        box(title = "Word Cloud of Teams by Wins",footer="Dynamic with Season and Game Type Selection", status = "primary",width=NULL,
@@ -136,33 +138,33 @@ dashboardPage(
                        ),
                 ), # end column, continue row
                 column(width=3,
-                  # Team name and mascot name
-                  box(title="",status = "primary",width=NULL,height=224,
-                      tags$h2(textOutput("teamTitle1")),
-                      tags$h3(textOutput("teamTitle2")),
-                      textOutput("teamText")
-                      ),
+                       # Team name and mascot name
+                       box(title="",status = "primary",width=NULL,height=224,
+                           tags$h2(textOutput("teamTitle1")),
+                           tags$h3(textOutput("teamTitle2")),
+                           textOutput("teamText")
+                       ),
                 ), # end column, continue row
                 column(width=6,
-                  # Top right corner metric boxes
-                  valueBoxOutput("seaBox"),
-                  valueBoxOutput("gameBox"),
-                  valueBoxOutput("postBox"),
-                  valueBoxOutput("winBox"),
-                  valueBoxOutput("lossBox"),
-                  valueBoxOutput("winPctBox")
+                       # Top right corner metric boxes
+                       valueBoxOutput("seaBox"),
+                       valueBoxOutput("gameBox"),
+                       valueBoxOutput("postBox"),
+                       valueBoxOutput("winBox"),
+                       valueBoxOutput("lossBox"),
+                       valueBoxOutput("winPctBox")
                 ) # end column
               ), # end fluidRow
               fluidRow(
                 column(width=6,
                        # Charts and plots
-                  box(status = "primary",tabsetPanel(type = "tabs",
-                                tabPanel("All", plotlyOutput("allWinPlot")),
-                                tabPanel("Home", plotlyOutput("homeWinPlot")),
-                                tabPanel("Away", plotlyOutput("awayWinPlot")),
-                                tabPanel("Neutral", plotlyOutput("neutralWinPlot"))
-                    ),width=NULL,height = 475
-                  )
+                       box(status = "primary",tabsetPanel(type = "tabs",
+                                                          tabPanel("All", plotlyOutput("allWinPlot")),
+                                                          tabPanel("Home", plotlyOutput("homeWinPlot")),
+                                                          tabPanel("Away", plotlyOutput("awayWinPlot")),
+                                                          tabPanel("Neutral", plotlyOutput("neutralWinPlot"))
+                       ),width=NULL,height = 475
+                       )
                 ), # end column
                 column(width=6,
                        # Map of wins and losses
@@ -179,17 +181,17 @@ dashboardPage(
                        )
                 )
               ) # end row
-          ), # END OF TEAM SUMMARY
+      ), # END OF TEAM SUMMARY
       
       # GAMES
       tabItem(tabName = "gameSum",
-               fluidRow(
-                 column(width = 12,
-                        box(title="Game Summary Data Set",status = "primary",
-                            div(style = 'overflow-x: scroll', DT::dataTableOutput("tableGames")),width = NULL)
-                 ) # end column
-               ) # end fluidRow
-             ), # END OF GAMES
+              fluidRow(
+                column(width = 12,
+                       box(title="Game Summary Data Set",status = "primary",
+                           div(style = 'overflow-x: scroll', DT::dataTableOutput("tableGames")),width = NULL)
+                ) # end column
+              ) # end fluidRow
+      ), # END OF GAMES
       
       #####
       ##### UNSUPERVISED
@@ -218,20 +220,20 @@ dashboardPage(
                 column(width = 6,
                        box(title="Team",status="primary",width = 4,height=160,
                            uiOutput("teamLogoProGLM")
-                           ),
+                       ),
                        box(id="glmBoxLoc",title="Location",status="primary",width = 4,height=160,align = "center",collapsible = TRUE,collapsed = TRUE,
                            uiOutput("locForGLM")
-                           ),
+                       ),
                        box(id="glmBoxOpp",title="Opponent",status="primary",width = 4,height=160,align = "center",collapsible = TRUE,collapsed = TRUE,
                            uiOutput("oppLogoProGLM")
-                           ),
+                       ),
                        valueBoxOutput("glmPredictBox"),
                        valueBoxOutput("glmAccBox"),
                        valueBoxOutput("glmNumVar")
                 ), # end column
                 column(width = 3,
                        box(title="Model Training Process",status="primary",width = NULL,height=283,
-                          uiOutput("glmTrainProcess"))
+                           uiOutput("glmTrainProcess"))
                 ), # end column
               ), # end fluidRow
               fluidRow(
