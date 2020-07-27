@@ -186,6 +186,23 @@ dashboardPage(
       # GAMES
       tabItem(tabName = "gameSum",
               fluidRow(
+                column(width = 4,
+                       box(title="Game Summary",status = "primary",width = NULL,
+                           "Basic summary statistics and visualizations from the games data set are provided."),
+                       box(title="Numeric Summaries",status = "primary",width = NULL,
+                           tabsetPanel(type = "tabs",
+                                       tabPanel("1", plotlyOutput("gsName"))
+                           ))
+                ), # end column
+                column(width = 8,
+                       box(title="Graphical Summaries",status = "primary",width = NULL,
+                           tabsetPanel(type = "tabs",
+                                       tabPanel("Box Plot", plotlyOutput("gsBoxPoints")),
+                                       tabPanel("Histogram", plotlyOutput("gsHistPoints"))
+                           ))
+                ) # end column
+              ), # end fluidRow
+              fluidRow(
                 column(width = 12,
                        box(title="Game Summary Data Set",status = "primary",
                            div(style = 'overflow-x: scroll', DT::dataTableOutput("tableGames")),width = NULL)

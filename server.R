@@ -94,9 +94,7 @@ function(input, output, session) {
       mutate(score=paste0(teamPointsScored,"-",oppPointsScored)) %>%
       mutate(margin=teamPointsScored-oppPointsScored) %>%
       mutate(location=ifelse(neutral_site,"Neutral",ifelse(home==1,"Home","Away"))) %>%
-      mutate(schedule=ifelse(teamConference=="Other" & oppConference=="Other",NA,
-                             ifelse(teamConference==oppConference,"Conference","NonConference"))
-      ) %>%
+      mutate(schedule=ifelse(conference_game,"Conference","NonConference")) %>%
       rename("excitementIndex"=excitement_index)
     games <- arrange(games,kickoffDate)
     # Join with talent data sets
@@ -153,9 +151,7 @@ function(input, output, session) {
       mutate(score=paste0(teamPointsScored,"-",oppPointsScored)) %>%
       mutate(margin=teamPointsScored-oppPointsScored) %>%
       mutate(location=ifelse(neutral_site,"Neutral",ifelse(home==1,"Home","Away"))) %>%
-      mutate(schedule=ifelse(teamConference=="Other" & oppConference=="Other",NA,
-                             ifelse(teamConference==oppConference,"Conference","NonConference"))
-      ) %>%
+      mutate(schedule=ifelse(conference_game,"Conference","NonConference")) %>%
       rename("excitementIndex"=excitement_index)
     games <- arrange(games,kickoffDate)
     # Join with talent data sets
@@ -606,7 +602,7 @@ function(input, output, session) {
       rfReValue$train <- gamesTrain
       rfReValue$test <- gamesTest
       # 1. Use trainControl() function to control computations and set number of desired folds for cross validation
-      trctrl <- trainControl(method = "repeatedcv", number = 5, repeats = 10)
+      trctrl <- trainControl(method = "repeatedcv", number = 5, repeats = 8)
       # 2. Set a seed for reproducible result
       set.seed(3333)
       incProgress(2/3, detail = "Training model for best results. Growing trees takes time, please be patient...")
@@ -986,11 +982,50 @@ function(input, output, session) {
   })
   
   ###
-  ### GAMES
+  ### GAME SUMMARY
   ###
   
+  # Box plot
+  output$gsBoxPoints <- renderPlotly({
+    getGames <- newGames()
+    boxPoints <- ggplot(data=getGames) +
+      geom_jitter(aes(x=location,y=teamPointsScored,color=location)) +
+      geom_boxplot(aes(x=location,y=teamPointsScored)) +
+      labs(x="Location",y="Team Points Scored",title="Boxplot for Team Points Scored by Location") +
+      theme(legend.position = "none")
+    y <- ggplotly(boxPoints)
+    y
+  })
+  
+  
+  
+  # Histogram
+  output$gsHistPoints <- renderPlotly({
+    getGames <- newGames()
+    histPoints <- ggplot(data=getGames,aes(x=teamPointsScored,y=..density..)) +
+      geom_density(adjust=0.4,size=3,color="red") +
+      geom_histogram(bins=30) + labs(x="Team Points Scored",y="Game Count",title="Histogram of Team Points Scored")
+    y <- ggplotly(histPoints)
+    y
+  })
+  
+  
   output$tableGames <- DT::renderDataTable({
-    DT::datatable(newGames(),options = list(orderClasses = TRUE,pageLength = 5))
+    getGamesPro <- newGames()
+    getTeams <- newTeams()
+    customPrintName <- paste0(getTeams$abbreviation," Game Summary")
+    customFileName <- paste0(getTeams$abbreviation,"gameSummary")
+    DT::datatable(getGamesPro,extensions = 'Buttons',
+                  options = list(orderClasses = TRUE, pageLength = 5,dom = 'Blfrtip',
+                                 lengthMenu = list(c(5,10,25,50,100,-1),c('5','10','25','50','100','All')),
+                                 buttons = c(list(list(extend = 'copy', title= "")),
+                                             list(list(extend = 'print', title= customPrintName)),
+                                             list(list(extend = 'csv', filename= customFileName)),
+                                             list(list(extend = 'excel',filename= customFileName,title= "")),
+                                             list(list(extend = 'pdf', filename= customFileName,title= customPrintName,orientation='landscape',pageSize= 'LEGAL'))
+                                 )
+                  )
+    )
   })
   
   #####
