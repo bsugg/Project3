@@ -1255,6 +1255,13 @@ function(input, output, session) {
     )
   })
   
+  output$glmSelectNotes <- renderUI({
+    tags$div(HTML(paste(tags$br(),tags$i("Game Location"),"includes 3 binary variables: Home, Away, and Neutral.",tags$br(),
+                        tags$i("Venue Details"),"includes 3 variables: elevation, grass (binary), and dome (binary).")
+    )
+    )
+  })
+  
   # Model training process text
   output$glmTrainProcess <- renderUI({
     getModelData <- glmModelData()
@@ -1397,6 +1404,13 @@ function(input, output, session) {
                         tags$strong("Model Type:"),"Random Forests",tags$br(),
                         tags$strong("Model Description:"),"Builds decision trees on bootstrapped training samples, then takes a random sample of predictors 
                         to be used as split candidates. This helps prevent any strong predictors from consistently occuring in each tree.")
+    )
+    )
+  })
+  
+  output$rfSelectNotes <- renderUI({
+    tags$div(HTML(paste(tags$br(),tags$i("Game Location"),"includes 3 binary variables: Home, Away, and Neutral.",tags$br(),
+                        tags$i("Venue Details"),"includes 3 variables: elevation, grass (binary), and dome (binary).")
     )
     )
   })

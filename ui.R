@@ -293,7 +293,7 @@ dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(id="glmStep1",title="Step 1: Create Prediction Model",status="primary",width = NULL,collapsible = TRUE,
-                           "Select the predictors you would like to use in your model:",
+                           "Select the predictors to use in the model fit:",
                            checkboxInput("glmTeamScore", "Team Points Scored", TRUE),
                            checkboxInput("glmTeamTalent", "Team Talent Level", TRUE),
                            checkboxInput("glmOppTalent", "Opponent Talent Level", TRUE),
@@ -302,7 +302,8 @@ dashboardPage(
                            checkboxInput("glmVenue", "Venue Details", TRUE),
                            checkboxInput("glmCrowd", "Crowd Size", TRUE),
                            "Create a new prediction model:",br(),
-                           actionButton("glmCreate", "Create Model")
+                           actionButton("glmCreate", "Create Model"),
+                           uiOutput("glmSelectNotes")
                        )
                 ), # end column
                 column(width = 4,
@@ -379,7 +380,7 @@ dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(id="rfStep1",title="Step 1: Create Prediction Model",status="primary",width = NULL,collapsible = TRUE,
-                           "Select the predictors you would like to use in your model:",
+                           "Select the predictors to use in the model fit:",
                            checkboxInput("rfTeamScore", "Team Points Scored", TRUE),
                            checkboxInput("rfTeamTalent", "Team Talent Level", TRUE),
                            checkboxInput("rfOppTalent", "Opponent Talent Level", TRUE),
@@ -388,7 +389,8 @@ dashboardPage(
                            checkboxInput("rfVenue", "Venue Details", TRUE),
                            checkboxInput("rfCrowd", "Crowd Size", TRUE),
                            "Create a new prediction model:",br(),
-                           actionButton("rfCreate", "Create Model")
+                           actionButton("rfCreate", "Create Model"),
+                           uiOutput("rfSelectNotes")
                        )
                 ), # end column
                 column(width = 4,
