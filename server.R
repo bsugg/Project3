@@ -1035,7 +1035,7 @@ function(input, output, session) {
   })
     
   # Box plot
-  output$gsBoxPoints <- renderPlotly({
+  output$gsBoxPointsTeam <- renderPlotly({
     getGames <- newGames()
     boxPoints <- ggplot(data=getGames) +
       geom_jitter(aes(x=location,y=teamPointsScored,color=location)) +
@@ -1047,12 +1047,54 @@ function(input, output, session) {
   })
   
   # Histogram
-  output$gsHistPoints <- renderPlotly({
+  output$gsHistPointsTeam <- renderPlotly({
     getGames <- newGames()
     histPoints <- ggplot(data=getGames,aes(x=teamPointsScored,y=..density..)) +
       geom_density(adjust=0.4,size=3,color="red") +
-      geom_histogram(bins=input$histSlide) + labs(x="Team Points Scored",y="Game Count",title="Histogram of Team Points Scored")
+      geom_histogram(bins=input$histSlideTeam) + labs(x="Team Points Scored",y="Game Count Density",title="Histogram of Team Points Scored")
     y <- ggplotly(histPoints)
+    y
+  })
+  
+  # Scatter plot opponent talent vs team points
+  output$gsPlotScoreOTteam <- renderPlotly({
+    getGames <- newGames()
+    getGames <- rename(getGames,"Outcome"=outcome)
+    plotScoreOT <- ggplot(data=getGames,aes(x=oppTalent,y=teamPointsScored,color=Outcome)) +
+      geom_point() + geom_smooth(method=lm) + labs(x="Opponent Talent",y="Team Points Scored",title="Opponent Talent vs Team Points Scored")
+    y <- ggplotly(plotScoreOT)
+    y
+  })
+  
+  # Box plot
+  output$gsBoxPointsOpp <- renderPlotly({
+    getGames <- newGames()
+    boxPoints <- ggplot(data=getGames) +
+      geom_jitter(aes(x=location,y=oppPointsScored,color=location)) +
+      geom_boxplot(aes(x=location,y=oppPointsScored)) +
+      labs(x="Location",y="Opponent Points Scored",title="Boxplot for Opponent Points Scored by Location") +
+      theme(legend.position = "none")
+    y <- ggplotly(boxPoints)
+    y
+  })
+  
+  # Histogram
+  output$gsHistPointsOpp <- renderPlotly({
+    getGames <- newGames()
+    histPoints <- ggplot(data=getGames,aes(x=oppPointsScored,y=..density..)) +
+      geom_density(adjust=0.4,size=3,color="red") +
+      geom_histogram(bins=input$histSlideOpp) + labs(x="Opponent Points Scored",y="Game Count Density",title="Histogram of Opponent Points Scored")
+    y <- ggplotly(histPoints)
+    y
+  })
+  
+  # Scatter plot opponent talent vs opponent points
+  output$gsPlotScoreOTopp <- renderPlotly({
+    getGames <- newGames()
+    getGames <- rename(getGames,"Outcome"=outcome)
+    plotScoreOT <- ggplot(data=getGames,aes(x=oppTalent,y=oppPointsScored,color=Outcome)) +
+      geom_point() + geom_smooth(method=lm) + labs(x="Opponent Talent",y="Opponent Points Scored",title="Opponent Talent vs Opponent Points Scored")
+    y <- ggplotly(plotScoreOT)
     y
   })
   

@@ -201,9 +201,14 @@ dashboardPage(
                 column(width = 7,
                        box(title="Graphical Summaries",status = "primary",width = NULL,
                            tabsetPanel(type = "tabs",
-                                       tabPanel("Box Plot", plotlyOutput("gsBoxPoints")),
-                                       tabPanel("Histogram", sliderInput("histSlide", "Number of Bins",min=10, max=30,value=20),
-                                       plotlyOutput("gsHistPoints"))
+                                       tabPanel("Team Box Plot", plotlyOutput("gsBoxPointsTeam")),
+                                       tabPanel("Team Hist", sliderInput("histSlideTeam", "Number of Bins",min=10, max=30,value=20),
+                                       plotlyOutput("gsHistPointsTeam")),
+                                       tabPanel("Team Scatter Plot", plotlyOutput("gsPlotScoreOTteam")),
+                                       tabPanel("Opp Box Plot", plotlyOutput("gsBoxPointsOpp")),
+                                       tabPanel("Opp Hist", sliderInput("histSlideOpp", "Number of Bins",min=10, max=30,value=20),
+                                                plotlyOutput("gsHistPointsOpp")),
+                                       tabPanel("Opp Scatter Plot", plotlyOutput("gsPlotScoreOTopp"))
                            ))
                 ) # end column
               ), # end fluidRow
