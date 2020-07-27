@@ -247,7 +247,7 @@ function(input, output, session) {
   glmModelData <- reactive({
     getGames <- newGames()
     getGames <- getGames %>% select(won,teamPointsScored,teamTalent,oppTalent,location,excitementIndex,
-                                    venueElevation,venueGrass,venueDome,venueLat,venueLong,attendance)
+                                    venueElevation,venueGrass,venueDome,attendance)
     # Transform
     getGames <- getGames %>% mutate("locHome"=as.integer(ifelse(location=="Home",1,0))) %>%
       mutate("locAway"=as.integer(ifelse(location=="Away",1,0))) %>%
@@ -285,7 +285,7 @@ function(input, output, session) {
     glmUserData <- data.frame("won"=factor("0",levels = c("0", "1")),"teamPointsScored"=as.numeric(0),
                               "teamTalent"=as.numeric(0),"oppTalent"=as.numeric(0),"excitementIndex"=as.numeric(0),
                               "venueElevation"=as.numeric(0),"venueGrass"=as.logical(FALSE),"venueDome"=as.logical(FALSE),
-                              "venueLat"=as.numeric(0),"venueLong"=as.numeric(0),"attendance"=as.integer(0),
+                              "attendance"=as.integer(0),
                               "locHome"=as.integer(0),"locAway"=as.integer(0),"locNeutral"=as.integer(0))
     # UPDATE with USER PREDICOTRS
     if(input$glmTeamScore) {glmUserData$teamPointsScored <- input$glmSlideScore} else{glmUserData <- select(glmUserData,-teamPointsScored)}
@@ -301,8 +301,7 @@ function(input, output, session) {
       glmUserData$venueElevation <- userVenue$venueElevation
       glmUserData$venueGrass <- userVenue$venueGrass
       glmUserData$venueDome <- userVenue$venueDome
-      glmUserData$venueLat <- userVenue$venueLat
-      glmUserData$venueLong <- userVenue$venueLong
+
     } else{glmUserData <- glmUserData %>% select(-starts_with("venue"))}
     if(input$glmCrowd) {glmUserData$attendance <- input$glmSlideCrowd} else{glmUserData <- select(glmUserData,-attendance)}
     return(glmUserData)
@@ -520,7 +519,7 @@ function(input, output, session) {
   rfModelData <- reactive({
     getGames <- newGames()
     getGames <- getGames %>% select(won,teamPointsScored,teamTalent,oppTalent,location,excitementIndex,
-                                    venueElevation,venueGrass,venueDome,venueLat,venueLong,attendance)
+                                    venueElevation,venueGrass,venueDome,attendance)
     # Transform
     getGames <- getGames %>% mutate("locHome"=as.integer(ifelse(location=="Home",1,0))) %>%
       mutate("locAway"=as.integer(ifelse(location=="Away",1,0))) %>%
@@ -558,8 +557,7 @@ function(input, output, session) {
     rfUserData <- data.frame("won"=factor("0",levels = c("0", "1")),"teamPointsScored"=as.numeric(0),
                              "teamTalent"=as.numeric(0),"oppTalent"=as.numeric(0),"excitementIndex"=as.numeric(0),
                              "venueElevation"=as.numeric(0),"venueGrass"=as.logical(FALSE),"venueDome"=as.logical(FALSE),
-                             "venueLat"=as.numeric(0),"venueLong"=as.numeric(0),"attendance"=as.integer(0),
-                             "locHome"=as.integer(0),"locAway"=as.integer(0),"locNeutral"=as.integer(0))
+                             "attendance"=as.integer(0),"locHome"=as.integer(0),"locAway"=as.integer(0),"locNeutral"=as.integer(0))
     # UPDATE with USER PREDICOTRS
     if(input$rfTeamScore) {rfUserData$teamPointsScored <- input$rfSlideScore} else{rfUserData <- select(rfUserData,-teamPointsScored)}
     if(input$rfTeamTalent) {rfUserData$teamTalent <- as.numeric(input$rfSlideTTalent)} else{rfUserData <- select(rfUserData,-teamTalent)}
@@ -574,8 +572,6 @@ function(input, output, session) {
       rfUserData$venueElevation <- userVenue$venueElevation
       rfUserData$venueGrass <- userVenue$venueGrass
       rfUserData$venueDome <- userVenue$venueDome
-      rfUserData$venueLat <- userVenue$venueLat
-      rfUserData$venueLong <- userVenue$venueLong
     } else{rfUserData <- rfUserData %>% select(-starts_with("venue"))}
     if(input$rfCrowd) {rfUserData$attendance <- input$rfSlideCrowd} else{rfUserData <- select(rfUserData,-attendance)}
     return(rfUserData)
@@ -758,7 +754,7 @@ function(input, output, session) {
   
   
   
-  ###################### OUTPUT ################################################
+  ###################### RENDER OUTPUT ################################################
   
   #####
   ##### UI ACTIONS
