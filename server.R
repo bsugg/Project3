@@ -17,9 +17,10 @@ library(plotly)
 library(wordcloud2)
 library(tm)
 library(data.table)
+library(autoplotly)
 
 # Call data generated from save function within the "CollegeFootballAPI.R" file
-load("collegeFootball.Rdata")
+load("collegeFootball.RData")
 
 # Utilize shinyjs package for javascript code to collapse boxes on command
 jscode <- "
@@ -29,8 +30,8 @@ $('#' + boxid).closest('.box').find('[data-widget=collapse]').click();
 "
 
 function(input, output, session) {
-
-###################### REACTIVE ELEMENTS #####################################
+  
+  ###################### REACTIVE ELEMENTS #####################################
   
   #####
   ##### TEAM ATTRIBUTES
@@ -60,8 +61,8 @@ function(input, output, session) {
   newGames <- reactive({
     # Filter on user selected team and parse "games" data set for home and away
     gamesHome <- games %>% filter(home_team == input$team) %>%
-                           filter(season >= input$sliderSeason[1]) %>%
-                           filter(season <= input$sliderSeason[2]) %>%
+      filter(season >= input$sliderSeason[1]) %>%
+      filter(season <= input$sliderSeason[2]) %>%
       mutate(home=1) %>%
       mutate(away=0) %>%
       mutate(teamConference=as.character(ifelse(!is.na(home_conference),home_conference,"Other"))) %>%
@@ -73,8 +74,8 @@ function(input, output, session) {
       mutate(oppConference=as.character(ifelse(!is.na(away_conference),away_conference,"Other"))) %>%
       mutate(oppPointsScored=away_points)
     gamesAway <- games %>% filter(away_team == input$team) %>%
-                           filter(season >= input$sliderSeason[1]) %>%
-                           filter(season <= input$sliderSeason[2]) %>%
+      filter(season >= input$sliderSeason[1]) %>%
+      filter(season <= input$sliderSeason[2]) %>%
       mutate(home=0) %>%
       mutate(away=1) %>%
       mutate(teamConference=as.character(ifelse(!is.na(away_conference),away_conference,"Other"))) %>%
@@ -89,14 +90,14 @@ function(input, output, session) {
     games <- bind_rows(gamesHome,gamesAway)
     # Add a few more attributes and sort by date
     games <- games %>% mutate(outcome=as.factor(ifelse(won==1,"Won",ifelse(loss==1,"Loss","Tie")))) %>%
-                       mutate(team=input$team) %>%
-                       mutate(score=paste0(teamPointsScored,"-",oppPointsScored)) %>%
-                       mutate(margin=teamPointsScored-oppPointsScored) %>%
-                       mutate(location=ifelse(neutral_site,"Neutral",ifelse(home==1,"Home","Away"))) %>%
-                       mutate(schedule=ifelse(teamConference=="Other" & oppConference=="Other",NA,
-                                             ifelse(teamConference==oppConference,"Conference","NonConference"))
-                       ) %>%
-                       rename("excitementIndex"=excitement_index)
+      mutate(team=input$team) %>%
+      mutate(score=paste0(teamPointsScored,"-",oppPointsScored)) %>%
+      mutate(margin=teamPointsScored-oppPointsScored) %>%
+      mutate(location=ifelse(neutral_site,"Neutral",ifelse(home==1,"Home","Away"))) %>%
+      mutate(schedule=ifelse(teamConference=="Other" & oppConference=="Other",NA,
+                             ifelse(teamConference==oppConference,"Conference","NonConference"))
+      ) %>%
+      rename("excitementIndex"=excitement_index)
     games <- arrange(games,kickoffDate)
     # Join with talent data sets
     games <- left_join(games,talentTeam,by=c("season","team"))
@@ -182,6 +183,33 @@ function(input, output, session) {
   })
   
   #####
+  ##### UNSUPERVISED
+  #####
+  
+  unsuperGames <- reactive({
+    getGames <- newGames()
+    getGames <- getGames %>% select(won,teamPointsScored,teamTalent,oppTalent,location,excitementIndex,
+                                    venueElevation,venueGrass,venueDome,attendance)
+    # Transform
+    getGames <- getGames %>% mutate("locHome"=as.integer(ifelse(location=="Home",1,0))) %>%
+      mutate("locAway"=as.integer(ifelse(location=="Away",1,0))) %>%
+      mutate("locNeutral"=as.integer(ifelse(location=="Neutral",1,0))) %>%
+      select(-location) %>%
+      rename("outcome"=won)
+      getGames$outcome <- factor(ifelse(getGames$outcome==1,"Won","Loss"))
+    # Dynamic variable selection based on user input
+    if(input$unsuperTeamScore) {getGames} else{getGames <- select(getGames,-teamPointsScored)}
+    if(input$unsuperTeamTalent) {getGames} else{getGames <- select(getGames,-teamTalent)}
+    if(input$unsuperOppTalent) {getGames} else{getGames <- select(getGames,-oppTalent)}
+    if(input$unsuperLoc) {getGames} else{getGames <- getGames %>% select(-starts_with("loc"))}
+    if(input$unsuperExcite) {getGames} else{getGames <- select(getGames,-excitementIndex)}
+    if(input$unsuperVenue) {getGames} else{getGames <- getGames %>% select(-starts_with("venue"))}
+    if(input$unsuperCrowd) {getGames} else{getGames <- select(getGames,-attendance)}
+    # Remove records with NA values
+    getGames <- as.data.frame(na.omit(getGames))
+  })
+  
+  #####
   ##### MODELING
   #####
   
@@ -220,108 +248,108 @@ function(input, output, session) {
   # MODEL DATA SET
   
   glmModelData <- reactive({
-      getGames <- newGames()
-      getGames <- getGames %>% select(won,teamPointsScored,teamTalent,oppTalent,location,excitementIndex,
-                                      venueElevation,venueGrass,venueDome,venueLat,venueLong,attendance)
-      # Transform
-      getGames <- getGames %>% mutate("locHome"=as.integer(ifelse(location=="Home",1,0))) %>%
-        mutate("locAway"=as.integer(ifelse(location=="Away",1,0))) %>%
-        mutate("locNeutral"=as.integer(ifelse(location=="Neutral",1,0))) %>%
-        select(-location)
-      getGames$won <- as.factor(getGames$won)
-      # Dynamic variable selection based on user input
-      if(input$glmTeamScore) {getGames} else{getGames <- select(getGames,-teamPointsScored)}
-      if(input$glmTeamTalent) {getGames} else{getGames <- select(getGames,-teamTalent)}
-      if(input$glmOppTalent) {getGames} else{getGames <- select(getGames,-oppTalent)}
-      if(input$glmLoc) {getGames} else{getGames <- getGames %>% select(-starts_with("loc"))}
-      if(input$glmExcite) {getGames} else{getGames <- select(getGames,-excitementIndex)}
-      if(input$glmVenue) {getGames} else{getGames <- getGames %>% select(-starts_with("venue"))}
-      if(input$glmCrowd) {getGames} else{getGames <- select(getGames,-attendance)}
-      # Remove records with NA values
-      getGames <- as.data.frame(na.omit(getGames))
-      ## Data slicing for model fit later on
-      # Set seed for reproducible results
-      set.seed(1)
-      # Create the training and test sets
-      train <- sample(1:nrow(getGames),size=nrow(getGames)*0.7)
-      test <- dplyr::setdiff(1:nrow(getGames),train)
-      gamesTrain <- getGames[train, ]
-      gamesTrain <- gamesTrain %>% mutate("modelFitSet"="Train")
-      gamesTest <- getGames[test, ]
-      gamesTest <- gamesTest %>% mutate("modelFitSet"="Test")
-      # Merge back together, with new modelFitSet column
-      getGames <- bind_rows(gamesTrain,gamesTest)
-    })
+    getGames <- newGames()
+    getGames <- getGames %>% select(won,teamPointsScored,teamTalent,oppTalent,location,excitementIndex,
+                                    venueElevation,venueGrass,venueDome,venueLat,venueLong,attendance)
+    # Transform
+    getGames <- getGames %>% mutate("locHome"=as.integer(ifelse(location=="Home",1,0))) %>%
+      mutate("locAway"=as.integer(ifelse(location=="Away",1,0))) %>%
+      mutate("locNeutral"=as.integer(ifelse(location=="Neutral",1,0))) %>%
+      select(-location)
+    getGames$won <- as.factor(getGames$won)
+    # Dynamic variable selection based on user input
+    if(input$glmTeamScore) {getGames} else{getGames <- select(getGames,-teamPointsScored)}
+    if(input$glmTeamTalent) {getGames} else{getGames <- select(getGames,-teamTalent)}
+    if(input$glmOppTalent) {getGames} else{getGames <- select(getGames,-oppTalent)}
+    if(input$glmLoc) {getGames} else{getGames <- getGames %>% select(-starts_with("loc"))}
+    if(input$glmExcite) {getGames} else{getGames <- select(getGames,-excitementIndex)}
+    if(input$glmVenue) {getGames} else{getGames <- getGames %>% select(-starts_with("venue"))}
+    if(input$glmCrowd) {getGames} else{getGames <- select(getGames,-attendance)}
+    # Remove records with NA values
+    getGames <- as.data.frame(na.omit(getGames))
+    ## Data slicing for model fit later on
+    # Set seed for reproducible results
+    set.seed(1)
+    # Create the training and test sets
+    train <- sample(1:nrow(getGames),size=nrow(getGames)*0.7)
+    test <- dplyr::setdiff(1:nrow(getGames),train)
+    gamesTrain <- getGames[train, ]
+    gamesTrain <- gamesTrain %>% mutate("modelFitSet"="Train")
+    gamesTest <- getGames[test, ]
+    gamesTest <- gamesTest %>% mutate("modelFitSet"="Test")
+    # Merge back together, with new modelFitSet column
+    getGames <- bind_rows(gamesTrain,gamesTest)
+  })
   
   # CREATE USER PREDICTORS DATA SET
   
   glmUserData <- reactive({
-  userVenue <- glmModelVenue()
-  glmUserData <- data.frame("won"=factor("0",levels = c("0", "1")),"teamPointsScored"=as.numeric(0),
-                            "teamTalent"=as.numeric(0),"oppTalent"=as.numeric(0),"excitementIndex"=as.numeric(0),
-                            "venueElevation"=as.numeric(0),"venueGrass"=as.logical(FALSE),"venueDome"=as.logical(FALSE),
-                            "venueLat"=as.numeric(0),"venueLong"=as.numeric(0),"attendance"=as.integer(0),
-                            "locHome"=as.integer(0),"locAway"=as.integer(0),"locNeutral"=as.integer(0))
-  # UPDATE with USER PREDICOTRS
-  if(input$glmTeamScore) {glmUserData$teamPointsScored <- input$glmSlideScore} else{glmUserData <- select(glmUserData,-teamPointsScored)}
-  if(input$glmTeamTalent) {glmUserData$teamTalent <- as.numeric(input$glmSlideTTalent)} else{glmUserData <- select(glmUserData,-teamTalent)}
-  if(input$glmOppTalent) {glmUserData$oppTalent <- as.numeric(input$glmSlideOTalent)} else{glmUserData <- select(glmUserData,-oppTalent)}
-  if(input$glmLoc) {
-    if(input$glmSelectLoc=="Home") {glmUserData$locHome <- as.integer(1)
-    } else { if(input$glmSelectLoc=="Away") {glmUserData$locAway <- as.integer(1)
-    } else {glmUserData$locNeutral <- as.integer(1)}}
-  } else{glmUserData <- glmUserData %>% select(-starts_with("loc"))}
-  if(input$glmExcite) {glmUserData$excitementIndex <- as.numeric(input$glmSlideExcite)} else{glmUserData <- select(glmUserData,-excitementIndex)}
-  if(input$glmVenue) {
-    glmUserData$venueElevation <- userVenue$venueElevation
-    glmUserData$venueGrass <- userVenue$venueGrass
-    glmUserData$venueDome <- userVenue$venueDome
-    glmUserData$venueLat <- userVenue$venueLat
-    glmUserData$venueLong <- userVenue$venueLong
-  } else{glmUserData <- glmUserData %>% select(-starts_with("venue"))}
-  if(input$glmCrowd) {glmUserData$attendance <- input$glmSlideCrowd} else{glmUserData <- select(glmUserData,-attendance)}
-  return(glmUserData)
+    userVenue <- glmModelVenue()
+    glmUserData <- data.frame("won"=factor("0",levels = c("0", "1")),"teamPointsScored"=as.numeric(0),
+                              "teamTalent"=as.numeric(0),"oppTalent"=as.numeric(0),"excitementIndex"=as.numeric(0),
+                              "venueElevation"=as.numeric(0),"venueGrass"=as.logical(FALSE),"venueDome"=as.logical(FALSE),
+                              "venueLat"=as.numeric(0),"venueLong"=as.numeric(0),"attendance"=as.integer(0),
+                              "locHome"=as.integer(0),"locAway"=as.integer(0),"locNeutral"=as.integer(0))
+    # UPDATE with USER PREDICOTRS
+    if(input$glmTeamScore) {glmUserData$teamPointsScored <- input$glmSlideScore} else{glmUserData <- select(glmUserData,-teamPointsScored)}
+    if(input$glmTeamTalent) {glmUserData$teamTalent <- as.numeric(input$glmSlideTTalent)} else{glmUserData <- select(glmUserData,-teamTalent)}
+    if(input$glmOppTalent) {glmUserData$oppTalent <- as.numeric(input$glmSlideOTalent)} else{glmUserData <- select(glmUserData,-oppTalent)}
+    if(input$glmLoc) {
+      if(input$glmSelectLoc=="Home") {glmUserData$locHome <- as.integer(1)
+      } else { if(input$glmSelectLoc=="Away") {glmUserData$locAway <- as.integer(1)
+      } else {glmUserData$locNeutral <- as.integer(1)}}
+    } else{glmUserData <- glmUserData %>% select(-starts_with("loc"))}
+    if(input$glmExcite) {glmUserData$excitementIndex <- as.numeric(input$glmSlideExcite)} else{glmUserData <- select(glmUserData,-excitementIndex)}
+    if(input$glmVenue) {
+      glmUserData$venueElevation <- userVenue$venueElevation
+      glmUserData$venueGrass <- userVenue$venueGrass
+      glmUserData$venueDome <- userVenue$venueDome
+      glmUserData$venueLat <- userVenue$venueLat
+      glmUserData$venueLong <- userVenue$venueLong
+    } else{glmUserData <- glmUserData %>% select(-starts_with("venue"))}
+    if(input$glmCrowd) {glmUserData$attendance <- input$glmSlideCrowd} else{glmUserData <- select(glmUserData,-attendance)}
+    return(glmUserData)
   })
   
   # MODEL FITTING AND USER PREDICTOR CREATION
   
   glmReValue <- reactiveValues()
-
+  
   # GLM Create Button Actions
   
   glmCreateModel <- observeEvent(input$glmCreate,{
     # Launch progress bar
     withProgress(message = 'Fitting model...', value = 0,{ 
-    gamesTrain <- glmModelData()
-    userVenue <- glmModelVenue()
-    glmUserData <- glmUserData()
-    incProgress(1/3, detail = "Splitting data...")
-    gamesTrain <- gamesTrain %>% filter(modelFitSet=="Train") %>%
-      select(-modelFitSet)
-    gamesTest <- glmModelData()
-    gamesTest <- gamesTest %>% filter(modelFitSet=="Test") %>%
-      select(-modelFitSet)
-    # Add the test and train data sets to the reactive value
-    glmReValue$train <- gamesTrain
-    glmReValue$test <- gamesTest
-    # 1. Use trainControl() function to control computations and set number of desired folds for cross validation
-    trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
-    # 2. Set a seed for reproducible result
-    set.seed(3333)
-    incProgress(2/3, detail = "Training model for best results, please be patient...")
-    # 3. Use train() function to determine a generalized linear regression model of best fit
-    logReg_fit <- train(won ~ ., data = gamesTrain, method = "glm", family="binomial", trControl=trctrl, preProcess = c("center", "scale"), tuneLength = 10)
-    incProgress(3/3, detail = "Testing model...")
-    # 4. Test newly created model against the test set and generate confusion matric for performance metrics
-    testPredGLM <- predict(logReg_fit, newdata = gamesTest)
-    conMatrixGLM <- confusionMatrix(testPredGLM,gamesTest$won)
-    userPredGLM <- predict(logReg_fit, newdata = glmUserData)
-    # Add the model and confusion matrix test accuracy figure to the reactive value
-    glmReValue$model <- logReg_fit
-    glmReValue$finalModel <- logReg_fit$finalModel
-    glmReValue$numVar <- as.character(length(logReg_fit[[22]]))
-    glmReValue$accuracy <- conMatrixGLM[[3]][[1]]
-    # Finish progress bar
+      gamesTrain <- glmModelData()
+      userVenue <- glmModelVenue()
+      glmUserData <- glmUserData()
+      incProgress(1/3, detail = "Splitting data...")
+      gamesTrain <- gamesTrain %>% filter(modelFitSet=="Train") %>%
+        select(-modelFitSet)
+      gamesTest <- glmModelData()
+      gamesTest <- gamesTest %>% filter(modelFitSet=="Test") %>%
+        select(-modelFitSet)
+      # Add the test and train data sets to the reactive value
+      glmReValue$train <- gamesTrain
+      glmReValue$test <- gamesTest
+      # 1. Use trainControl() function to control computations and set number of desired folds for cross validation
+      trctrl <- trainControl(method = "repeatedcv", number = 5, repeats = 10)
+      # 2. Set a seed for reproducible result
+      set.seed(3333)
+      incProgress(2/3, detail = "Training model for best results, please be patient...")
+      # 3. Use train() function to determine a generalized linear regression model of best fit
+      logReg_fit <- train(won ~ ., data = gamesTrain, method = "glm", family="binomial", trControl=trctrl, preProcess = c("center", "scale"), tuneLength = 10)
+      incProgress(3/3, detail = "Testing model...")
+      # 4. Test newly created model against the test set and generate confusion matric for performance metrics
+      testPredGLM <- predict(logReg_fit, newdata = gamesTest)
+      conMatrixGLM <- confusionMatrix(testPredGLM,gamesTest$won)
+      userPredGLM <- predict(logReg_fit, newdata = glmUserData)
+      # Add the model and confusion matrix test accuracy figure to the reactive value
+      glmReValue$model <- logReg_fit
+      glmReValue$finalModel <- logReg_fit$finalModel
+      glmReValue$numVar <- as.character(length(logReg_fit[[22]]))
+      glmReValue$accuracy <- conMatrixGLM[[3]][[1]]
+      # Finish progress bar
     })
     
     output$glmAccBox <- renderValueBox({
@@ -342,9 +370,9 @@ function(input, output, session) {
     })
     
     output$glmNumVar <- renderValueBox({
-          valueBox(
-            glmReValue$numVar, "Predictors", icon = icon("hashtag"),
-          color="light-blue")
+      valueBox(
+        glmReValue$numVar, "Predictors", icon = icon("hashtag"),
+        color="light-blue")
     })
     
     js$collapse("glmStep1")
@@ -354,7 +382,7 @@ function(input, output, session) {
     js$collapse("glmBoxLoc")
     js$collapse("glmBoxOpp")
   })
-
+  
   # GLM Predict Button Actions
   
   glmMakePrediction <- observeEvent(input$glmPredict,{
@@ -397,9 +425,9 @@ function(input, output, session) {
     reset("glmSelectVenue")
     # Reset value boxes
     output$glmPredictBox <- renderValueBox({
-        valueBox(
-          "","",color="light-blue"
-          )
+      valueBox(
+        "","",color="light-blue"
+      )
     })
     output$glmAccBox <- renderValueBox({
       valueBox(
@@ -531,10 +559,10 @@ function(input, output, session) {
   rfUserData <- reactive({
     userVenue <- rfModelVenue()
     rfUserData <- data.frame("won"=factor("0",levels = c("0", "1")),"teamPointsScored"=as.numeric(0),
-                              "teamTalent"=as.numeric(0),"oppTalent"=as.numeric(0),"excitementIndex"=as.numeric(0),
-                              "venueElevation"=as.numeric(0),"venueGrass"=as.logical(FALSE),"venueDome"=as.logical(FALSE),
-                              "venueLat"=as.numeric(0),"venueLong"=as.numeric(0),"attendance"=as.integer(0),
-                              "locHome"=as.integer(0),"locAway"=as.integer(0),"locNeutral"=as.integer(0))
+                             "teamTalent"=as.numeric(0),"oppTalent"=as.numeric(0),"excitementIndex"=as.numeric(0),
+                             "venueElevation"=as.numeric(0),"venueGrass"=as.logical(FALSE),"venueDome"=as.logical(FALSE),
+                             "venueLat"=as.numeric(0),"venueLong"=as.numeric(0),"attendance"=as.integer(0),
+                             "locHome"=as.integer(0),"locAway"=as.integer(0),"locNeutral"=as.integer(0))
     # UPDATE with USER PREDICOTRS
     if(input$rfTeamScore) {rfUserData$teamPointsScored <- input$rfSlideScore} else{rfUserData <- select(rfUserData,-teamPointsScored)}
     if(input$rfTeamTalent) {rfUserData$teamTalent <- as.numeric(input$rfSlideTTalent)} else{rfUserData <- select(rfUserData,-teamTalent)}
@@ -578,7 +606,7 @@ function(input, output, session) {
       rfReValue$train <- gamesTrain
       rfReValue$test <- gamesTest
       # 1. Use trainControl() function to control computations and set number of desired folds for cross validation
-      trctrl <- trainControl(method = "repeatedcv", number = 4, repeats = 3)
+      trctrl <- trainControl(method = "repeatedcv", number = 5, repeats = 10)
       # 2. Set a seed for reproducible result
       set.seed(3333)
       incProgress(2/3, detail = "Training model for best results. Growing trees takes time, please be patient...")
@@ -730,11 +758,11 @@ function(input, output, session) {
       }
     })
   })
-
-
   
-###################### OUTPUT ################################################
-
+  
+  
+  ###################### OUTPUT ################################################
+  
   #####
   ##### UI ACTIONS
   #####
@@ -773,14 +801,14 @@ function(input, output, session) {
   # Word cloud of wins by teams
   output$infoCloudTeams <- renderWordcloud2({
     withProgress(message = 'Generating word cloud...', value = 0,{
-    getGamesDouble <- allGamesDouble()
-    getGamesDouble <- getGamesDouble %>% filter(won==1) %>% select(team,won,outcome)
-    freqTab <- as.data.frame(table(getGamesDouble$outcome,getGamesDouble$team))
-    freqTab <- tibble::rownames_to_column(freqTab) %>% filter(Var1=="Won") %>% select(Var2,Freq) %>% rename("word"=Var2,"freq"=Freq) %>% dplyr::arrange(desc(freq))
-    incProgress(1/1, detail = "Generating word cloud...")
-    wordcloud2(freqTab,size=.2,color="random-dark")
+      getGamesDouble <- allGamesDouble()
+      getGamesDouble <- getGamesDouble %>% filter(won==1) %>% select(team,won,outcome)
+      freqTab <- as.data.frame(table(getGamesDouble$outcome,getGamesDouble$team))
+      freqTab <- tibble::rownames_to_column(freqTab) %>% filter(Var1=="Won") %>% select(Var2,Freq) %>% rename("word"=Var2,"freq"=Freq) %>% dplyr::arrange(desc(freq))
+      incProgress(1/1, detail = "Generating word cloud...")
+      wordcloud2(freqTab,size=.2,color="random-dark")
     }) # end progress bar
-    })
+  })
   
   #####
   ##### DATA EXPLORATION
@@ -932,8 +960,8 @@ function(input, output, session) {
                                tags$strong("Outcome: "),getGamesPro$outcome," ",getGamesPro$score,br(),
                                tags$strong("Location: "),getGamesPro$location,br(),
                                tags$strong("Venue: "),getGamesPro$venueName," in ",getGamesPro$venueCityState
-                               )
-                )
+                 )
+      )
   })
   
   # TABLE
@@ -952,7 +980,7 @@ function(input, output, session) {
                                              list(list(extend = 'csv', filename= customFileName)),
                                              list(list(extend = 'excel',filename= customFileName,title= "")),
                                              list(list(extend = 'pdf', filename= customFileName,title= customPrintName,orientation='landscape',pageSize= 'LEGAL'))
-                                             )
+                                 )
                   )
     )
   })
@@ -965,9 +993,74 @@ function(input, output, session) {
     DT::datatable(newGames(),options = list(orderClasses = TRUE,pageLength = 5))
   })
   
-  ###
-  ### MODELING
-  ###
+  #####
+  ##### UNSUPERVISED
+  #####
+  
+  # Text
+  output$unsuperPcaIntro <- renderUI({
+    tags$div(HTML(paste("Identifies linear combinations of selected variables that account for as 
+                        much variability as possible. Variables are scaled and centered to neutralize different 
+                        units of measure. This PCA biplot contains",tags$b(nrow(unsuperGames())),"observations and",
+                        tags$b(ncol(unsuperGames())-1)," variables.")
+    )
+    )
+  })
+  output$unsuperSelect <- renderUI({
+    tags$div(HTML(paste("Select at least 2:")
+    )
+    )
+  })
+  output$unsuperSelectNotes <- renderUI({
+    tags$div(HTML(paste(tags$br(),tags$i("Game Location"),"includes 3 binary variables: Home, Away, and Neutral.",tags$br(),tags$br(),
+                        tags$i("Venue Details"),"includes 3 variables: elevation, grass (binary), and dome (binary).")
+    )
+    )
+  })
+  
+
+  # Create plots
+  output$unsuperPCA <- renderPlotly({
+    unsuper <- unsuperGames()
+    unsuper <- unsuper %>% rename("Outcome"=outcome)
+    endCol <- ncol(unsuper)
+    pca <- autoplotly(prcomp(unsuper[2:endCol]), data = unsuper,center=TRUE,scale=TRUE,colour = "Outcome", frame = TRUE) +
+      ggplot2::ggtitle("Principal Components Analysis") +
+      ggplot2::labs(y = "Second Principal Component", x = "First Principal Component")
+    # Add center point
+    pca %>% plotly::layout(annotations = list(
+      text = "Center",
+      font = list(
+        family = "Courier New, monospace",
+        size = 14,
+        color = "black"),
+      x = 0,
+      y = 0,
+      showarrow = TRUE))
+  })
+  
+  # Data table
+  output$tableUnsuper <- DT::renderDataTable({
+    getUnsuperGames <- unsuperGames()
+    getTeams <- newTeams()
+    customPrintName <- paste0(getTeams$abbreviation," Unsupervised Data Set")
+    customFileName <- paste0(getTeams$abbreviation,"unsupervisedDataSet")
+    DT::datatable(getUnsuperGames,extensions = 'Buttons',
+                  options = list(orderClasses = TRUE, pageLength = 5,dom = 'Blfrtip',
+                                 lengthMenu = list(c(5,10,25,50,100,-1),c('5','10','25','50','100','All')),
+                                 buttons = c(list(list(extend = 'copy', title= "")),
+                                             list(list(extend = 'print', title= customPrintName)),
+                                             list(list(extend = 'csv', filename= customFileName)),
+                                             list(list(extend = 'excel',filename= customFileName,title= "")),
+                                             list(list(extend = 'pdf', filename= customFileName,title= customPrintName,orientation='landscape',pageSize= 'LEGAL'))
+                                 )
+                  )
+    )
+  })
+  
+  #####
+  ##### MODELING
+  #####
   
   #########################
   ########## GLM ##########
@@ -981,10 +1074,10 @@ function(input, output, session) {
   # Location status
   output$locForGLM <- renderUI({
     if (input$glmLoc) {
-        tags$div(
-          HTML(paste(tags$h3(input$glmSelectLoc),tags$h4(tags$i("vs")))
-          )
+      tags$div(
+        HTML(paste(tags$h3(input$glmSelectLoc),tags$h4(tags$i("vs")))
         )
+      )
     } else{
       tags$div(
         HTML(paste(tags$h3("Anywhere"),tags$h4("vs"))
@@ -1018,7 +1111,7 @@ function(input, output, session) {
     nFit <- nrow(glmModelData())
     nTrain <- sum(getModelData$modelFitSet == "Train")
     nTest <- sum(getModelData$modelFitSet == "Test")
-      
+    
     tags$div(HTML(paste("The custom filtered data set is split into a",tags$i("model training"),"set (70%) and a",tags$i("model testing"),"set (30%). The",
                         tags$i("model training"),"set undergoes k-fold cross validation for the model fit. The fitted model is selected automatically by the",
                         tags$code("caret"),"package based on resulting accuracy. Final accuracy is determined by applying the model to the",
@@ -1261,3 +1354,11 @@ function(input, output, session) {
     )
   })
 }
+
+# Text
+#output$unsuperSelect <- renderUI({
+#  tags$div(HTML(paste()
+#  )
+#  )
+#})
+

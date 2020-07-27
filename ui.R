@@ -13,7 +13,7 @@ library(plotly)
 # Icons sourced from https://fontawesome.com/icons?d=gallery&m=free
 
 # Call data generated from save function within the "CollegeFootballAPI.R" file
-load("collegeFootball.Rdata")
+load("collegeFootball.RData")
 
 # Utilize shinyjs package for javascript code to collapse boxes on command
 jscode <- "
@@ -51,7 +51,7 @@ dashboardPage(
                menuSubItem("Generalized Linear Model", tabName = "modelGLM"),
                menuSubItem("Ensemble Model", tabName = "modelRF")
       ),
-      menuItem("Data", tabName = "data", icon = icon("th")),
+      #menuItem("Data", tabName = "data", icon = icon("th")),
       menuItem("Source API", icon = icon("file-code-o"),
                menuSubItem("Main Page", href = "https://collegefootballdata.com/"),
                menuSubItem("Glossary",href = "https://collegefootballdata.com/Glossary")
@@ -199,9 +199,39 @@ dashboardPage(
       
       tabItem(tabName = "unsupervised",
               fluidRow(
-                column(width = 12,
+                column(width = 2,
                        box(title="Unsupervised Learning",status = "primary",width = NULL,
-                           "Will go here...")
+                           "Unsupervised learning is exploratory in nature, with no clear objective  or goal
+                           in mind. Interpretation of these plots is subjective and should encourage additional exploration."),
+                       box(title="Principal Component Analysis",status = "primary",width = NULL,
+                           uiOutput("unsuperPcaIntro"))
+                       #box(title="Clustering",status = "primary",width = NULL,
+                       #    "Clustering finds subgroups of variables in the data that should be similar to one another. The two 
+                       #    primary methods for this technique are K-Means Clustering and Hierarchical Clustering.")
+                ), # end column
+                column(width = 2,
+                       box(title="Plot Variables",status = "primary",width = NULL,
+                           uiOutput("unsuperSelect"),
+                           checkboxInput("unsuperTeamScore", "Team Points Scored", TRUE),
+                           checkboxInput("unsuperTeamTalent", "Team Talent Level", TRUE),
+                           checkboxInput("unsuperOppTalent", "Opponent Talent Level", TRUE),
+                           checkboxInput("unsuperLoc", "Game Location", TRUE),
+                           checkboxInput("unsuperExcite", "Game Excitement Level", TRUE),
+                           checkboxInput("unsuperVenue", "Venue Details", TRUE),
+                           checkboxInput("unsuperCrowd", "Crowd Size", TRUE),
+                           uiOutput("unsuperSelectNotes"))
+                ), # end column
+                column(width = 8,
+                       box(title="Plots",status = "primary",width = NULL,
+                           tabsetPanel(type = "tabs",
+                                       tabPanel("PCA", plotlyOutput("unsuperPCA")) # tabPanel("Cluster", plotlyOutput("unsuperCluster"))
+                                       ))  
+                ) # end column
+              ), # end fluidRow
+              fluidRow(
+                column(width = 12,
+                       box(title="Unsupervised Data Set",status = "primary",
+                           div(style = 'overflow-x: scroll', DT::dataTableOutput("tableUnsuper")),width = NULL)
                 ) # end column
               ) # end fluidRow
       ), # END OF UNSUPERVISED
