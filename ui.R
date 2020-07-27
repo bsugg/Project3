@@ -42,8 +42,7 @@ dashboardPage(
       menuItem("Information", tabName = "info", icon = icon("info")),
       menuItem("Data Exploration", tabName = "explore", icon = icon("bar-chart-o"),
                 menuSubItem("Team Summary", tabName = "teamSum"),
-                menuSubItem("Games", tabName = "games"),
-                menuSubItem("Venues", tabName = "venues")
+                menuSubItem("Game Summary", tabName = "gameSum")
                ),
       menuItem("Unsupervised Learning", tabName = "unsupervised", icon = icon("chalkboard-teacher")),
       menuItem("Modeling", tabName = "model", icon = icon("code-branch"),
@@ -138,10 +137,10 @@ dashboardPage(
                 column(width=6,
                        # Charts and plots
                   box(status = "primary",tabsetPanel(type = "tabs",
-                                tabPanel("All", plotOutput("allWinPlot")),
-                                tabPanel("Conference", plotOutput("confWinPlot")),
-                                tabPanel("NonConference", plotOutput("nonConfWinPlot")),
-                                tabPanel("Postseason", plotOutput("postWinPlot"))
+                                tabPanel("All", plotlyOutput("allWinPlot")),
+                                tabPanel("Home", plotlyOutput("homeWinPlot")),
+                                tabPanel("Away", plotlyOutput("awayWinPlot")),
+                                tabPanel("Neutral", plotlyOutput("neutralWinPlot"))
                     ),width=NULL,height = 475
                   )
                 ), # end column
@@ -163,7 +162,7 @@ dashboardPage(
           ), # END OF TEAM SUMMARY
       
       # GAMES
-      tabItem(tabName = "games",
+      tabItem(tabName = "gameSum",
                fluidRow(
                  column(width = 12,
                         box(title="Game Summary Data Set",status = "primary",
