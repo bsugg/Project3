@@ -287,7 +287,7 @@ function(input, output, session) {
                               "venueElevation"=as.numeric(0),"venueGrass"=as.logical(FALSE),"venueDome"=as.logical(FALSE),
                               "attendance"=as.integer(0),
                               "locHome"=as.integer(0),"locAway"=as.integer(0),"locNeutral"=as.integer(0))
-    # UPDATE with USER PREDICOTRS
+    # UPDATE with USER PREDICTORS
     if(input$glmTeamScore) {glmUserData$teamPointsScored <- input$glmSlideScore} else{glmUserData <- select(glmUserData,-teamPointsScored)}
     if(input$glmTeamTalent) {glmUserData$teamTalent <- as.numeric(input$glmSlideTTalent)} else{glmUserData <- select(glmUserData,-teamTalent)}
     if(input$glmOppTalent) {glmUserData$oppTalent <- as.numeric(input$glmSlideOTalent)} else{glmUserData <- select(glmUserData,-oppTalent)}
@@ -347,7 +347,6 @@ function(input, output, session) {
       glmReValue$accuracy <- conMatrixGLM[[3]][[1]]
       # Finish progress bar
     })
-    
     output$glmAccBox <- renderValueBox({
       acc <- round(glmReValue$accuracy*100,1)
       if (glmReValue$accuracy<.5) {
@@ -364,13 +363,43 @@ function(input, output, session) {
           color="green")}
       }
     })
-    
     output$glmNumVar <- renderValueBox({
       valueBox(
         glmReValue$numVar, "Predictors", icon = icon("hashtag"),
         color="light-blue")
     })
+    ######################## UPDATES STEP 2 PREDICTORS WITH HISTORICALS
+    # TEAM SCORE
+    # Team score selection, set average based on historical 
+    getGamesPro <- newGames()
+    avgPointValue <- as.integer(mean(getGamesPro$teamPointsScored))
+    updateSliderInput(session,"glmSlideScore",value = avgPointValue)
     
+    # TALENT
+    # Team talent slider, set average value from previous seasons
+    getTeamTalent <- glmModelTeamTalent()
+    avgTeamTalent <- as.integer(mean(getTeamTalent$teamTalent))
+    updateSliderInput(session,"glmSlideTTalent",value = avgTeamTalent)
+    # Opponent talent slider, set average value from previous seasons
+    getOppTalent <- glmModelOppTalent()
+    avgOppTalent <- as.integer(mean(getOppTalent$teamTalent))
+    updateSliderInput(session,"glmSlideOTalent",value = avgOppTalent)
+    
+    # EXCITEMENT INDEX
+    # Excitement index selection, set average based on historical 
+    exciteValue <- as.integer(mean(getGamesPro$excitementIndex))
+    updateSliderInput(session,"glmSlideExcite",value = exciteValue)
+    
+    # VENUE
+    # Venue selection, set max of crowd slider to venue capacity
+    getVenue <- glmModelVenue()
+    if (input$glmVenue == 1) {
+      capacity <- as.integer(getVenue$venueCapacity)
+      updateSliderInput(session,"glmSlideCrowd",value = capacity, max = capacity)
+    } else {
+      updateSliderInput(session,"glmSlideCrowd",value = 50000, max = 100000)
+    }
+    ############################################################
     js$collapse("glmStep1")
     js$collapse("glmStep2")
     js$collapse("glmStep3")
@@ -435,51 +464,38 @@ function(input, output, session) {
         "","",color="light-blue"
       )
     })
+    ######################## UPDATES STEP 2 PREDICTORS WITH HISTORICALS
     # TEAM SCORE
-    
     # Team score selection, set average based on historical 
-    observe({
-      getGamesPro <- newGames()
-      avgPointValue <- as.integer(mean(getGamesPro$teamPointsScored))
-      updateSliderInput(session,"glmSlideScore",value = avgPointValue)
-    })
+    getGamesPro <- newGames()
+    avgPointValue <- as.integer(mean(getGamesPro$teamPointsScored))
+    updateSliderInput(session,"glmSlideScore",value = avgPointValue)
     
     # TALENT
-    
     # Team talent slider, set average value from previous seasons
-    observe({
-      getTeamTalent <- glmModelTeamTalent()
-      avgTeamTalent <- as.integer(mean(getTeamTalent$teamTalent))
-      updateSliderInput(session,"glmSlideTTalent",value = avgTeamTalent)
-    })
+    getTeamTalent <- glmModelTeamTalent()
+    avgTeamTalent <- as.integer(mean(getTeamTalent$teamTalent))
+    updateSliderInput(session,"glmSlideTTalent",value = avgTeamTalent)
     # Opponent talent slider, set average value from previous seasons
-    observe({
-      getOppTalent <- glmModelOppTalent()
-      avgOppTalent <- as.integer(mean(getOppTalent$teamTalent))
-      updateSliderInput(session,"glmSlideOTalent",value = avgOppTalent)
-    })
+    getOppTalent <- glmModelOppTalent()
+    avgOppTalent <- as.integer(mean(getOppTalent$teamTalent))
+    updateSliderInput(session,"glmSlideOTalent",value = avgOppTalent)
     
     # EXCITEMENT INDEX
-    
     # Excitement index selection, set average based on historical 
-    observe({
-      getGamesPro <- newGames()
-      exciteValue <- as.integer(mean(getGamesPro$excitementIndex))
-      updateSliderInput(session,"glmSlideExcite",value = exciteValue)
-    })
+    exciteValue <- as.integer(mean(getGamesPro$excitementIndex))
+    updateSliderInput(session,"glmSlideExcite",value = exciteValue)
     
     # VENUE
-    
     # Venue selection, set max of crowd slider to venue capacity
-    observe({
-      getVenue <- glmModelVenue()
-      if (input$glmVenue == 1) {
-        capacity <- as.integer(getVenue$venueCapacity)
-        updateSliderInput(session,"glmSlideCrowd",value = capacity, max = capacity)
-      } else {
-        updateSliderInput(session,"glmSlideCrowd",value = 50000, max = 100000)
-      }
-    })
+    getVenue <- glmModelVenue()
+    if (input$glmVenue == 1) {
+      capacity <- as.integer(getVenue$venueCapacity)
+      updateSliderInput(session,"glmSlideCrowd",value = capacity, max = capacity)
+    } else {
+      updateSliderInput(session,"glmSlideCrowd",value = 50000, max = 100000)
+    }
+    ############################################################
   })
   
   #########################
@@ -558,7 +574,7 @@ function(input, output, session) {
                              "teamTalent"=as.numeric(0),"oppTalent"=as.numeric(0),"excitementIndex"=as.numeric(0),
                              "venueElevation"=as.numeric(0),"venueGrass"=as.logical(FALSE),"venueDome"=as.logical(FALSE),
                              "attendance"=as.integer(0),"locHome"=as.integer(0),"locAway"=as.integer(0),"locNeutral"=as.integer(0))
-    # UPDATE with USER PREDICOTRS
+    # UPDATE with USER PREDICTORS
     if(input$rfTeamScore) {rfUserData$teamPointsScored <- input$rfSlideScore} else{rfUserData <- select(rfUserData,-teamPointsScored)}
     if(input$rfTeamTalent) {rfUserData$teamTalent <- as.numeric(input$rfSlideTTalent)} else{rfUserData <- select(rfUserData,-teamTalent)}
     if(input$rfOppTalent) {rfUserData$oppTalent <- as.numeric(input$rfSlideOTalent)} else{rfUserData <- select(rfUserData,-oppTalent)}
@@ -617,7 +633,6 @@ function(input, output, session) {
       rfReValue$accuracy <- conMatrixRF[[3]][[1]]
       # Finish progress bar
     })
-    
     output$rfAccBox <- renderValueBox({
       acc <- round(rfReValue$accuracy*100,1)
       if (rfReValue$accuracy<.5) {
@@ -634,13 +649,43 @@ function(input, output, session) {
           color="green")}
       }
     })
-    
     output$rfNumVar <- renderValueBox({
       valueBox(
         rfReValue$numVar, "Predictors", icon = icon("hashtag"),
         color="light-blue")
     })
+    ######################## UPDATES STEP 2 PREDICTORS WITH HISTORICALS
+    # TEAM SCORE
+    # Team score selection, set average based on historical 
+    getGamesPro <- newGames()
+    avgPointValue <- as.integer(mean(getGamesPro$teamPointsScored))
+    updateSliderInput(session,"rfSlideScore",value = avgPointValue)
     
+    # TALENT
+    # Team talent slider, set average value from previous seasons
+    getTeamTalent <- rfModelTeamTalent()
+    avgTeamTalent <- as.integer(mean(getTeamTalent$teamTalent))
+    updateSliderInput(session,"rfSlideTTalent",value = avgTeamTalent)
+    # Opponent talent slider, set average value from previous seasons
+    getOppTalent <- rfModelOppTalent()
+    avgOppTalent <- as.integer(mean(getOppTalent$teamTalent))
+    updateSliderInput(session,"rfSlideOTalent",value = avgOppTalent)
+    
+    # EXCITEMENT INDEX
+    # Excitement index selection, set average based on historical 
+    exciteValue <- as.integer(mean(getGamesPro$excitementIndex))
+    updateSliderInput(session,"rfSlideExcite",value = exciteValue)
+    
+    # VENUE
+    # Venue selection, set max of crowd slider to venue capacity
+    getVenue <- rfModelVenue()
+    if (input$rfVenue == 1) {
+      capacity <- as.integer(getVenue$venueCapacity)
+      updateSliderInput(session,"rfSlideCrowd",value = capacity, max = capacity)
+    } else {
+      updateSliderInput(session,"rfSlideCrowd",value = 50000, max = 100000)
+    }
+    ############################################################
     js$collapse("rfStep1")
     js$collapse("rfStep2")
     js$collapse("rfStep3")
@@ -705,51 +750,38 @@ function(input, output, session) {
         "","",color="light-blue"
       )
     })
+    ######################## UPDATES STEP 2 PREDICTORS WITH HISTORICALS
     # TEAM SCORE
-    
     # Team score selection, set average based on historical 
-    observe({
-      getGamesPro <- newGames()
-      avgPointValue <- as.integer(mean(getGamesPro$teamPointsScored))
-      updateSliderInput(session,"rfSlideScore",value = avgPointValue)
-    })
+    getGamesPro <- newGames()
+    avgPointValue <- as.integer(mean(getGamesPro$teamPointsScored))
+    updateSliderInput(session,"rfSlideScore",value = avgPointValue)
     
     # TALENT
-    
     # Team talent slider, set average value from previous seasons
-    observe({
-      getTeamTalent <- rfModelTeamTalent()
-      avgTeamTalent <- as.integer(mean(getTeamTalent$teamTalent))
-      updateSliderInput(session,"rfSlideTTalent",value = avgTeamTalent)
-    })
+    getTeamTalent <- rfModelTeamTalent()
+    avgTeamTalent <- as.integer(mean(getTeamTalent$teamTalent))
+    updateSliderInput(session,"rfSlideTTalent",value = avgTeamTalent)
     # Opponent talent slider, set average value from previous seasons
-    observe({
-      getOppTalent <- rfModelOppTalent()
-      avgOppTalent <- as.integer(mean(getOppTalent$teamTalent))
-      updateSliderInput(session,"rfSlideOTalent",value = avgOppTalent)
-    })
+    getOppTalent <- rfModelOppTalent()
+    avgOppTalent <- as.integer(mean(getOppTalent$teamTalent))
+    updateSliderInput(session,"rfSlideOTalent",value = avgOppTalent)
     
     # EXCITEMENT INDEX
-    
     # Excitement index selection, set average based on historical 
-    observe({
-      getGamesPro <- newGames()
-      exciteValue <- as.integer(mean(getGamesPro$excitementIndex))
-      updateSliderInput(session,"rfSlideExcite",value = exciteValue)
-    })
+    exciteValue <- as.integer(mean(getGamesPro$excitementIndex))
+    updateSliderInput(session,"rfSlideExcite",value = exciteValue)
     
     # VENUE
-    
     # Venue selection, set max of crowd slider to venue capacity
-    observe({
-      getVenue <- rfModelVenue()
-      if (input$rfVenue == 1) {
-        capacity <- as.integer(getVenue$venueCapacity)
-        updateSliderInput(session,"rfSlideCrowd",value = capacity, max = capacity)
-      } else {
-        updateSliderInput(session,"rfSlideCrowd",value = 50000, max = 100000)
-      }
-    })
+    getVenue <- rfModelVenue()
+    if (input$rfVenue == 1) {
+      capacity <- as.integer(getVenue$venueCapacity)
+      updateSliderInput(session,"rfSlideCrowd",value = capacity, max = capacity)
+    } else {
+      updateSliderInput(session,"rfSlideCrowd",value = 50000, max = 100000)
+    }
+    ############################################################
   })
   
   

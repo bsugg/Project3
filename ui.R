@@ -203,7 +203,7 @@ dashboardPage(
                            tabsetPanel(type = "tabs",
                                        tabPanel("Team Box Plot", plotlyOutput("gsBoxPointsTeam")),
                                        tabPanel("Team Hist", sliderInput("histSlideTeam", "Number of Bins",min=10, max=30,value=20),
-                                       plotlyOutput("gsHistPointsTeam")),
+                                                plotlyOutput("gsHistPointsTeam")),
                                        tabPanel("Team Scatter Plot", plotlyOutput("gsPlotScoreOTteam")),
                                        tabPanel("Opp Box Plot", plotlyOutput("gsBoxPointsOpp")),
                                        tabPanel("Opp Hist", sliderInput("histSlideOpp", "Number of Bins",min=10, max=30,value=20),
@@ -232,9 +232,6 @@ dashboardPage(
                            in mind. Interpretation of these plots is subjective and should encourage additional exploration."),
                        box(title="Principal Component Analysis",status = "primary",width = NULL,
                            uiOutput("unsuperPcaIntro"))
-                       #box(title="Clustering",status = "primary",width = NULL,
-                       #    "Clustering finds subgroups of variables in the data that should be similar to one another. The two 
-                       #    primary methods for this technique are K-Means Clustering and Hierarchical Clustering.")
                 ), # end column
                 column(width = 2,
                        box(title="Plot Variables",status = "primary",width = NULL,
