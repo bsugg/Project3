@@ -13,6 +13,7 @@ library(gbm)
 library(shinyjs)
 library(V8)
 library(mathjaxr)
+library(plotly)
 
 # Call data generated from save function within the "CollegeFootballAPI.R" file
 load("collegeFootball.Rdata")
@@ -783,17 +784,52 @@ function(input, output, session) {
     )
   })
   
-  # Create plot
-  output$allWinPlot <- renderPlot({
+  # Create plots
+  output$allWinPlot <- renderPlotly({
     getGames <- newGames()
-    # Conservation color option
-    # conColor <- ifelse(input$conservation,newData$conservation,"color:black;")
-    # Scatter plot creation
-    clustSkate <- ggplot(data=getGames,aes(x=as.factor(season)))
-    clustSkate + geom_bar(position="dodge",aes(fill=outcome)) +
+    plotSumAll <- ggplot(data=getGames,aes(x=as.factor(season))) +
+      geom_bar(position="dodge",aes(fill=outcome)) +
       labs(x="Season",y="Games",title="Game Outcome by Season") +
       scale_fill_discrete(name="") +
       theme_bw()
+    y <- ggplotly(plotSumAll)
+    y
+  })
+  # Create plots
+  output$homeWinPlot <- renderPlotly({
+    getGames <- newGames()
+    getGames <- filter(getGames,location=="Home")
+    plotSumAll <- ggplot(data=getGames,aes(x=as.factor(season))) +
+      geom_bar(position="dodge",aes(fill=outcome)) +
+      labs(x="Season",y="Games",title="Game Outcome by Season") +
+      scale_fill_discrete(name="") +
+      theme_bw()
+    y <- ggplotly(plotSumAll)
+    y
+  })
+  # Create plots
+  output$awayWinPlot <- renderPlotly({
+    getGames <- newGames()
+    getGames <- filter(getGames,location=="Away")
+    plotSumAll <- ggplot(data=getGames,aes(x=as.factor(season))) +
+      geom_bar(position="dodge",aes(fill=outcome)) +
+      labs(x="Season",y="Games",title="Game Outcome by Season") +
+      scale_fill_discrete(name="") +
+      theme_bw()
+    y <- ggplotly(plotSumAll)
+    y
+  })
+  # Create plots
+  output$neutralWinPlot <- renderPlotly({
+    getGames <- newGames()
+    getGames <- filter(getGames,location=="Neutral")
+    plotSumAll <- ggplot(data=getGames,aes(x=as.factor(season))) +
+      geom_bar(position="dodge",aes(fill=outcome)) +
+      labs(x="Season",y="Games",title="Game Outcome by Season") +
+      scale_fill_discrete(name="") +
+      theme_bw()
+    y <- ggplotly(plotSumAll)
+    y
   })
   
   # MAP
