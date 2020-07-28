@@ -21,5 +21,6 @@ library(tm)
 library(data.table)  
 library(autoplotly)  
 library(RColorBrewer)  
+library(kableExtra)  
 
 runGitHub("Project3","bsugg")
