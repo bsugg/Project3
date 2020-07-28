@@ -823,7 +823,7 @@ function(input, output, session) {
   
   # INFORMATION
   
-  output$infoWelcome <- renderUI({
+  output$infoOver <- renderUI({
     tags$div(HTML(paste(tags$h1("ST558 - Final Project - Brian Sugg"),
                         tags$blockquote(tags$i("Pick a team, any team!")),"This project focuses on the world of NCAA College Football, exploring common
                         stats for any selected team, including forecast models to predict the outcome of their games! The underlying data sets currently encompass",
@@ -839,17 +839,34 @@ function(input, output, session) {
     )
   })
   output$infoCap <- renderUI({
-    tags$div(HTML(paste("Cap")
+    tags$div(HTML(paste(tags$blockquote(tags$i("Winning isn't everything, but it beats anything that comes in second. -Bear Bryant")),
+                        "The",tags$i("Team, Season,"),"and",tags$i("Game Type Selection"),"filters in the main menu will control the elements of all pages. Hovering over charts 
+                        will reveal options for interactive analysis and an option to download the current image. All data tables at the bottom of each page will dynamically update 
+                        with the filtered selection being used in the corresponding visuals. These can be saved in multiple file formats with automatic file names unique to the team 
+                        that is selected. In addition to creating models and making predictions, there are several other features of this app:",
+                        tags$br(),
+                        tags$ul(
+                          tags$li(tags$i("Information"),"- Adjust the menu filters to update the word cloud. Can you identify the headline teams from each season?"),
+                          tags$li(tags$i("Data Exploration"),"- Two views provided:",tags$i("Team Summary"),"for high level game outcome analysis per season, with an interactive map of game locations 
+                                  and their results. Why does Michigan State seem to avoid playing games in the Southeastern United States in recent years?",tags$i("Game Summary"),
+                                  "provides a more detailed analysis with numerical and graphical summaries. How do game outcomes vary by location and opponent conference?"), 
+                          tags$li(tags$i("Unsupervised Learning"),"- Exploratory in nature. Adjust the predictor selection to see the resulting impact on the PCA biplot. Which combination of 
+                                  selections generate the most influence on game outcome?"),
+                          tags$li(tags$i("Modeling"),"- Two different types are available, with a similar interface. Follow the three step process, and see if you can adjust the 
+                                  predictor selection to improve model accuracy from the default selection. Once your model is created, try adjusting the predictor values and generate 
+                                  new predictions. Can a team score 0 points and still win the game?"),
+                          tags$li(tags$i("Source API"),"- A link to originally source for all data in this app.")
+                        )
+                        )
     )
     )
   })
-  output$infoFun <- renderUI({
-    tags$div(HTML(paste(tags$blockquote(tags$i("Why does Michigan State seem to avoid playing games in the Southeastern United States in recent years?")),
-                                        "The answer can be subjective depending on who you ask, but the fact is evident in the map under the",
-                                        tags$i("Team Summary"),"section. Other notable things to explore and look for:")
-    )
-    )
-  })
+  ### For future tab on fun things to discover...
+  #output$infoFun <- renderUI({
+  #  tags$div(HTML(paste("")
+  #  )
+  #  )
+  #})
   
   # WORD CLOUD
   

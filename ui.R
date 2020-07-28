@@ -97,9 +97,9 @@ dashboardPage(
                 column(width=6,
                        box(title = "Information", footer = "Data Last Refreshed: 27-July-2020", status = "primary",width=NULL,
                            tabsetPanel(type = "tabs",
-                                       tabPanel("Welcome", uiOutput("infoWelcome")),
-                                       tabPanel("Capabilities", uiOutput("infoCap")),
-                                       tabPanel("Fun Things", uiOutput("infoFun"))
+                                       tabPanel("Overview", uiOutput("infoOver")),
+                                       tabPanel("Capabilities", uiOutput("infoCap"))
+                                       #tabPanel("Fun Things", uiOutput("infoFun")) # For future addition
                            )
                        )
                 ), # END COLUMN
