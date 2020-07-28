@@ -828,12 +828,13 @@ function(input, output, session) {
                         tags$blockquote(tags$i("Pick a team, any team!")),"This project focuses on the world of NCAA College Football, exploring common
                         stats for any selected team, including forecast models to predict the outcome of their games! The underlying data sets currently encompass",
                         tags$b(nrow(games)),"games from",tags$b(nrow(teams)),"schools across the college football landscape, dating back to the 2012 season.",
-                        "Although full season stats are not available for smaller divisions, the majority of",tags$i("Division I FBS"),
-                        "programs are represented.",
+                        "Although full season stats are not available for smaller divisions, the majority of Division I FBS programs are represented.",
                         tags$br(),tags$br(),
                         "All data is sourced via API from",tags$i("collegefootballdata.com"),"which is linked in the main menu along with a glossary of terms. This interesting",
                         tags$a(href="https://blog.collegefootballdata.com/talking-tech-predicting-play-calls-using-a-random-forest-classifier/","blog post"),
-                        "utilizes the same data foundation to predict play calls using random forests!")
+                        "utilizes the same data foundation to predict play calls using random forests! The",tags$i("Modeling"),"section of this app will also 
+                        focus on a random forest ensemble model, along with a logistic regression model to attempt predicting the outcome of games. Despite the accuracy 
+                        measures, results are not guaranteed.")
     )
     )
   })
@@ -1278,8 +1279,8 @@ function(input, output, session) {
     tags$div(HTML(paste(tags$strong("Purpose:"),"Predicting the outcome of a college football game, with a binary response of either 1",tags$i("- Win"),
                         ", or 0",tags$i("- Lose"),".",tags$br(),tags$br(),
                         tags$strong("Model Type:"),"Logistic Regression",tags$br(),
-                        tags$strong("Model Description:"),"Often the primary method used for predicting a non-continuous response variable with a binary classification. 
-                        Applies a binomial regression with a logistic function.")
+                        tags$strong("Model Description:"),"The primary method preferred for predicting a response variable with a binary classification. 
+                        Applies a binomial regression with a logistic function:")
     )
     )
   })

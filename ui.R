@@ -97,7 +97,7 @@ dashboardPage(
                 column(width=6,
                        box(title = "Information", footer = "Data Last Refreshed: 27-July-2020", status = "primary",width=NULL,
                            tabsetPanel(type = "tabs",
-                                       tabPanel("Welcome", uiOutput("infoWelcome"),withMathJax("$$\\alpha+\\beta$$")),
+                                       tabPanel("Welcome", uiOutput("infoWelcome")),
                                        tabPanel("Capabilities", uiOutput("infoCap")),
                                        tabPanel("Fun Things", uiOutput("infoFun"))
                            )
@@ -255,17 +255,17 @@ dashboardPage(
       tabItem(tabName = "modelGLM",
               fluidRow(
                 column(width = 3,
-                       box(title="Generalized Linear Model",status="primary",width = NULL,height=283,
-                           uiOutput("glmIntro"))
+                       box(title="Generalized Linear Model",status="primary",width = NULL,height=293,
+                           uiOutput("glmIntro"),withMathJax("$$P = \\frac{1}{1 + e^{-(b_0+b_1x)}}$$"))
                 ), # end column
                 column(width = 6,
-                       box(title="Team",status="primary",width = 4,height=160,
+                       box(title="Team",status="primary",width = 4,height=170,
                            uiOutput("teamLogoProGLM")
                        ),
-                       box(id="glmBoxLoc",title="Location",status="primary",width = 4,height=160,align = "center",collapsible = TRUE,collapsed = TRUE,
+                       box(id="glmBoxLoc",title="Location",status="primary",width = 4,height=170,align = "center",collapsible = TRUE,collapsed = TRUE,
                            uiOutput("locForGLM")
                        ),
-                       box(id="glmBoxOpp",title="Opponent",status="primary",width = 4,height=160,align = "center",collapsible = TRUE,collapsed = TRUE,
+                       box(id="glmBoxOpp",title="Opponent",status="primary",width = 4,height=170,align = "center",collapsible = TRUE,collapsed = TRUE,
                            uiOutput("oppLogoProGLM")
                        ),
                        valueBoxOutput("glmPredictBox"),
@@ -273,7 +273,7 @@ dashboardPage(
                        valueBoxOutput("glmNumVar")
                 ), # end column
                 column(width = 3,
-                       box(title="Model Training Process",status="primary",width = NULL,height=283,
+                       box(title="Model Training Process",status="primary",width = NULL,height=293,
                            uiOutput("glmTrainProcess"))
                 ), # end column
               ), # end fluidRow
@@ -295,6 +295,7 @@ dashboardPage(
                 ), # end column
                 column(width = 4,
                        box(id="glmStep2",title="Step 2: Adjust Model Predictors",status="primary",width = NULL,collapsible = TRUE,collapsed=TRUE,
+                           "Default values based on historical averages and limits:",
                            conditionalPanel(condition = "input.glmTeamScore == 1",
                                             sliderInput("glmSlideScore", "Team Points Scored",min=0, max=80,value=40)),
                            conditionalPanel(condition = "input.glmTeamTalent == 1",
@@ -342,17 +343,17 @@ dashboardPage(
       tabItem(tabName = "modelRF",
               fluidRow(
                 column(width = 3,
-                       box(title="Ensemble Model",status="primary",width = NULL,height=283,
+                       box(title="Ensemble Model",status="primary",width = NULL,height=293,
                            uiOutput("rfIntro"))
                 ), # end column
                 column(width = 6,
-                       box(title="Team",status="primary",width = 4,height=160,
+                       box(title="Team",status="primary",width = 4,height=170,
                            uiOutput("teamLogoProRF")
                        ),
-                       box(id="rfBoxLoc",title="Location",status="primary",width = 4,height=160,align = "center",collapsible = TRUE,collapsed = TRUE,
+                       box(id="rfBoxLoc",title="Location",status="primary",width = 4,height=170,align = "center",collapsible = TRUE,collapsed = TRUE,
                            uiOutput("locForRF")
                        ),
-                       box(id="rfBoxOpp",title="Opponent",status="primary",width = 4,height=160,align = "center",collapsible = TRUE,collapsed = TRUE,
+                       box(id="rfBoxOpp",title="Opponent",status="primary",width = 4,height=170,align = "center",collapsible = TRUE,collapsed = TRUE,
                            uiOutput("oppLogoProRF")
                        ),
                        valueBoxOutput("rfPredictBox"),
@@ -360,7 +361,7 @@ dashboardPage(
                        valueBoxOutput("rfNumVar")
                 ), # end column
                 column(width = 3,
-                       box(title="Model Training Process",status="primary",width = NULL,height=283,
+                       box(title="Model Training Process",status="primary",width = NULL,height=293,
                            uiOutput("rfTrainProcess"))
                 ), # end column
               ), # end fluidRow
@@ -382,6 +383,7 @@ dashboardPage(
                 ), # end column
                 column(width = 4,
                        box(id="rfStep2",title="Step 2: Adjust Model Predictors",status="primary",width = NULL,collapsible = TRUE,collapsed=TRUE,
+                           "Default values based on historical averages and limits:",
                            conditionalPanel(condition = "input.rfTeamScore == 1",
                                             sliderInput("rfSlideScore", "Team Points Scored",min=0, max=80,value=40)),
                            conditionalPanel(condition = "input.rfTeamTalent == 1",
