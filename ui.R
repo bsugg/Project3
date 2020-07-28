@@ -95,13 +95,12 @@ dashboardPage(
       tabItem(tabName = "info",
               fluidRow(
                 column(width=6,
-                       box(title = "Information", status = "primary",width=NULL,
-                           "Brian Sugg", br(),
-                           "July 27, 2020", br(),
-                           br(),
-                           "Describes the data and abilities of the app.", br(),
-                           br(),
-                           "Other dynamic text here."
+                       box(title = "Information", footer = "Data Last Refreshed: 27-July-2020", status = "primary",width=NULL,
+                           tabsetPanel(type = "tabs",
+                                       tabPanel("Welcome", uiOutput("infoWelcome"),withMathJax("$$\\alpha+\\beta$$")),
+                                       tabPanel("Capabilities", uiOutput("infoCap")),
+                                       tabPanel("Fun Things", uiOutput("infoFun"))
+                           )
                        )
                 ), # END COLUMN
                 column(width=6,
@@ -109,18 +108,6 @@ dashboardPage(
                            wordcloud2Output("infoCloudTeams")
                        ),
                 ), # END COLUMN
-              ), # END FLUID ROW
-              fluidRow(
-                column(width=6,
-                       box(title = "Abilities", status = "primary",width=NULL,
-                           "Will put some notes here..."
-                       ),
-                ), # END COLUMN
-                column(width=6,
-                       box(title = "Things to Look For...", status = "primary",width=NULL,
-                           "Pending..."
-                       ),
-                ) # END COLUMN
               ) # END FLUID ROW
       ),
       
@@ -248,8 +235,8 @@ dashboardPage(
                 column(width = 8,
                        box(title="Plots",status = "primary",width = NULL,
                            tabsetPanel(type = "tabs",
-                                       tabPanel("PCA", plotlyOutput("unsuperPCA")) # tabPanel("Cluster", plotlyOutput("unsuperCluster"))
-                                       ))  
+                                       tabPanel("PCA", plotlyOutput("unsuperPCA"))
+                                       ))
                 ) # end column
               ), # end fluidRow
               fluidRow(

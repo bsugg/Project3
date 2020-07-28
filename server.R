@@ -821,7 +821,36 @@ function(input, output, session) {
   ##### INFORMATION
   #####
   
-  # WORD CLOUDS
+  # INFORMATION
+  
+  output$infoWelcome <- renderUI({
+    tags$div(HTML(paste(tags$h1("ST558 - Final Project - Brian Sugg"),
+                        tags$blockquote(tags$i("Pick a team, any team!")),"This project focuses on the world of NCAA College Football, exploring common
+                        stats for any selected team, including forecast models to predict the outcome of their games! The underlying data sets currently encompass",
+                        tags$b(nrow(games)),"games from",tags$b(nrow(teams)),"schools across the college football landscape, dating back to the 2012 season.",
+                        "Although full season stats are not available for smaller divisions, the majority of",tags$i("Division I FBS"),
+                        "programs are represented.",
+                        tags$br(),tags$br(),
+                        "All data is sourced via API from",tags$i("collegefootballdata.com"),"which is linked in the main menu along with a glossary of terms. This interesting",
+                        tags$a(href="https://blog.collegefootballdata.com/talking-tech-predicting-play-calls-using-a-random-forest-classifier/","blog post"),
+                        "utilizes the same data foundation to predict play calls using random forests!")
+    )
+    )
+  })
+  output$infoCap <- renderUI({
+    tags$div(HTML(paste("Cap")
+    )
+    )
+  })
+  output$infoFun <- renderUI({
+    tags$div(HTML(paste(tags$blockquote(tags$i("Why does Michigan State seem to avoid playing games in the Southeastern United States in recent years?")),
+                                        "The answer can be subjective depending on who you ask, but the fact is evident in the map under the",
+                                        tags$i("Team Summary"),"section. Other notable things to explore and look for:")
+    )
+    )
+  })
+  
+  # WORD CLOUD
   
   # Word cloud of wins by teams
   output$infoCloudTeams <- renderWordcloud2({
@@ -1165,7 +1194,7 @@ function(input, output, session) {
   })
   output$unsuperSelectNotes <- renderUI({
     tags$div(HTML(paste(tags$br(),tags$i("Game Location"),"includes 3 binary variables: Home, Away, and Neutral.",tags$br(),tags$br(),
-                        tags$i("Venue Details"),"includes 3 variables: elevation, grass (binary), and dome (binary).")
+                        tags$i("Venue Details"),"includes 3 variables: Elevation, Grass (binary), and Dome (binary).")
     )
     )
   })
@@ -1257,7 +1286,7 @@ function(input, output, session) {
   
   output$glmSelectNotes <- renderUI({
     tags$div(HTML(paste(tags$br(),tags$i("Game Location"),"includes 3 binary variables: Home, Away, and Neutral.",tags$br(),
-                        tags$i("Venue Details"),"includes 3 variables: elevation, grass (binary), and dome (binary).")
+                        tags$i("Venue Details"),"includes 3 variables: Elevation, Grass (binary), and Dome (binary).")
     )
     )
   })
@@ -1410,7 +1439,7 @@ function(input, output, session) {
   
   output$rfSelectNotes <- renderUI({
     tags$div(HTML(paste(tags$br(),tags$i("Game Location"),"includes 3 binary variables: Home, Away, and Neutral.",tags$br(),
-                        tags$i("Venue Details"),"includes 3 variables: elevation, grass (binary), and dome (binary).")
+                        tags$i("Venue Details"),"includes 3 variables: Elevation, Grass (binary), and Dome (binary).")
     )
     )
   })
